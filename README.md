@@ -20,6 +20,12 @@ Without a key, Equidy runs its built-in **offline analysis engine**, so every fe
 
 Production: `npm run build && npm start` (Express serves `dist/` and the API on one port).
 
+## Accounts (email and password)
+
+People create an account with name, email and password, and can then sign in from any device. Passwords are hashed with scrypt, using a unique salt per user, and users are stored in a Postgres table `equidy_users`, created automatically. Set `DATABASE_URL`, or `POSTGRES_URL`, which Vercel's Neon integration sets. On Vercel, open **Storage → Create Database → Neon**, pick the free plan, connect it to the project, and redeploy.
+
+Each account's portfolio and chats are kept separately in the browser. All portfolios start empty.
+
 ## Sign-in (Apple, Google, Microsoft)
 
 The app opens on a login page. Sign-in runs on the server (OAuth 2.0 authorization code with PKCE, through [arctic](https://arcticjs.dev)). The session lives in an HMAC-signed, HttpOnly cookie that lasts 30 days. Once any provider is configured, `/api/chat` requires a signed-in user.
@@ -38,13 +44,13 @@ Each provider turns on when its variables are set (see `.env.example`). Register
 
 Also set `APP_URL` (the public origin) and `SESSION_SECRET`. Apple needs HTTPS and a real domain. It does not accept `localhost` redirect URIs, so test it on a deployed URL or a tunnel.
 
-When no provider is configured, the login buttons open a local **demo account**. The page says this clearly, and no provider is contacted.
+Provider buttons appear on the login page only for providers that are configured. The static single-file preview has no server, so it offers a local demo instead.
 
 ## Deploy (free, no credit card): Vercel
 
 1. Push this folder to a GitHub repository, with `package.json` at the top level.
 2. At vercel.com, sign up with GitHub, choose **Add New → Project**, and import the repository. The settings come from `vercel.json`, so change nothing.
-3. Under **Environment Variables**, add `SESSION_SECRET` (a long random string). Optionally add `ANTHROPIC_API_KEY` and the sign-in provider keys.
+3. Under **Environment Variables**, add `SESSION_SECRET` (a long random string). Optionally add `ANTHROPIC_API_KEY` and the sign-in provider keys. For email accounts, add a Neon database from **Storage**.
 4. Click **Deploy**. Your site is at `https://<project>.vercel.app`. `APP_URL` is set automatically from Vercel's production domain.
 
 The frontend is served as static files, and `api/index.ts` runs the same Express app as a serverless function. `render.yaml` and the `Dockerfile` remain for Render or any container host.

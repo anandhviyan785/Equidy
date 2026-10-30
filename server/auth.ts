@@ -1,5 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import crypto from "node:crypto";
+import { AccountError, accountsEnabled, createAccount, rateLimit, verifyAccount } from "./accounts.js";
 import { Apple, Google, MicrosoftEntraId, OAuth2RequestError, decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 
 // OAuth sign-in with Google, Microsoft (Entra ID) and Apple.
@@ -9,7 +10,7 @@ export type ProviderId = "google" | "microsoft" | "apple";
 
 export interface SessionUser {
   id: string; // provider:subject
-  provider: ProviderId;
+  provider: ProviderId | "email";
   name: string;
   email: string | null;
   avatar: string | null;
@@ -43,7 +44,7 @@ const apple =
     : null;
 
 export const providers: Record<ProviderId, boolean> = { google: !!google, microsoft: !!microsoft, apple: !!apple };
-export const authEnabled = Object.values(providers).some(Boolean);
+export const authEnabled = accountsEnabled || Object.values(providers).some(Boolean);
 
 // ---------------- cookies & signed sessions ----------------
 
@@ -109,13 +110,36 @@ export const authRouter = express.Router();
 authRouter.use(express.urlencoded({ extended: false })); // Apple posts its callback as a form
 
 authRouter.get("/session", (req, res) => {
-  res.json({ user: readSession(req), providers });
+  res.json({ user: readSession(req), providers, accounts: accountsEnabled });
 });
 
 authRouter.post("/logout", (_req, res) => {
   setCookie(res, SESSION_COOKIE, "", { maxAge: 0 });
   res.json({ ok: true });
 });
+
+function startSession(res: Response, user: SessionUser) {
+  setCookie(res, SESSION_COOKIE, encodeSession(user), { maxAge: SESSION_DAYS * 86_400 });
+  res.json({ user });
+}
+
+function accountRoute(action: "signup" | "signin") {
+  return async (req: Request, res: Response) => {
+    try {
+      rateLimit(`${action}:${req.ip}`);
+      const body = (req.body ?? {}) as { name?: string; email?: string; password?: string };
+      const acct = action === "signup" ? await createAccount(body) : await verifyAccount(body);
+      startSession(res, { id: `email:${acct.id}`, provider: "email", name: acct.name, email: acct.email, avatar: null });
+    } catch (err) {
+      if (err instanceof AccountError) return void res.status(err.status).json({ error: err.message });
+      console.error(`[equidy] ${action} failed:`, err);
+      res.status(500).json({ error: "Something went wrong on our side. Please try again." });
+    }
+  };
+}
+
+authRouter.post("/signup", express.json(), accountRoute("signup"));
+authRouter.post("/signin", express.json(), accountRoute("signin"));
 
 authRouter.get("/:provider/start", (req, res) => {
   const p = req.params.provider as ProviderId;

@@ -20,6 +20,7 @@ Guidelines:
 
 // The Express app is shared by the long-running server (server/index.ts) and the Vercel function (api/index.ts).
 export const app = express();
+app.set("trust proxy", 1); // behind Vercel/Render proxies: req.ip is the visitor, not the proxy
 app.use(express.json({ limit: "1mb" }));
 app.use("/api/auth", authRouter);
 

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { app, hasKey, MODEL } from "./app.js";
 import { authEnabled, providers } from "./auth.js";
+import { accountsEnabled } from "./accounts.js";
 
 const PORT = Number(process.env.PORT ?? 8787);
 
@@ -17,5 +18,6 @@ if (fs.existsSync(dist)) {
 app.listen(PORT, () => {
   console.log(`[equidy] API on http://localhost:${PORT} — ${hasKey ? `Claude enabled (${MODEL})` : "offline engine (set ANTHROPIC_API_KEY to enable Claude)"}`);
   const on = Object.entries(providers).filter(([, v]) => v).map(([k]) => k);
-  console.log(`[equidy] sign-in: ${authEnabled ? on.join(", ") : "no providers configured (demo sign-in only)"}`);
+  if (accountsEnabled) on.unshift("email accounts");
+  console.log(`[equidy] sign-in: ${authEnabled ? on.join(", ") : "not configured (set DATABASE_URL for email accounts)"}`);
 });

@@ -48,6 +48,7 @@ export const useSettings = create<SettingsState>()(
 // ---------------- Portfolio & watchlist ----------------
 
 interface PortfolioState {
+  owner: string | null; // account the saved data belongs to
   holdings: Holding[];
   watchlist: string[];
   addHolding: (h: Omit<Holding, "id" | "addedAt">) => void;
@@ -55,24 +56,17 @@ interface PortfolioState {
   removeHolding: (id: string) => void;
   toggleWatch: (symbol: string) => void;
   reset: () => void;
+  claim: (owner: string) => void;
 }
 
-const DEFAULT_HOLDINGS: Holding[] = [
-  { symbol: "AAPL", shares: 45, costBasis: 168.2 },
-  { symbol: "MSFT", shares: 22, costBasis: 305.4 },
-  { symbol: "NVDA", shares: 60, costBasis: 92.5 },
-  { symbol: "GOOGL", shares: 30, costBasis: 138.0 },
-  { symbol: "JPM", shares: 25, costBasis: 172.3 },
-  { symbol: "JNJ", shares: 20, costBasis: 158.9 },
-  { symbol: "VTI", shares: 35, costBasis: 241.0 },
-  { symbol: "BND", shares: 80, costBasis: 72.1 },
-].map((h, i) => ({ ...h, id: `seed${i}`, addedAt: Date.now() - (400 - i * 30) * 86_400_000 }));
+const DEFAULT_HOLDINGS: Holding[] = [];
 
 const DEFAULT_WATCH = ["TSLA", "AMZN", "META", "V", "XOM", "BTC"];
 
 export const usePortfolio = create<PortfolioState>()(
   persist(
     (set) => ({
+      owner: null,
       holdings: DEFAULT_HOLDINGS,
       watchlist: DEFAULT_WATCH,
       addHolding: (h) =>
@@ -90,8 +84,16 @@ export const usePortfolio = create<PortfolioState>()(
       toggleWatch: (symbol) =>
         set((s) => ({ watchlist: s.watchlist.includes(symbol) ? s.watchlist.filter((x) => x !== symbol) : [...s.watchlist, symbol] })),
       reset: () => set({ holdings: DEFAULT_HOLDINGS, watchlist: DEFAULT_WATCH }),
+      // A different account signing in on this browser starts with its own empty portfolio.
+      claim: (owner) => set((s) => (s.owner === owner ? s : { owner, holdings: DEFAULT_HOLDINGS, watchlist: DEFAULT_WATCH })),
     }),
-    { name: "equidy.portfolio", storage },
+    {
+      name: "equidy.portfolio",
+      storage,
+      // v2: all portfolios reset to empty (previous versions seeded sample holdings).
+      version: 2,
+      migrate: (old) => ({ ...(old as PortfolioState), holdings: [], owner: null }),
+    },
   ),
 );
 
@@ -209,7 +211,7 @@ export type ProviderId = "google" | "microsoft" | "apple";
 
 export interface AuthUser {
   id: string;
-  provider: ProviderId;
+  provider: ProviderId | "email";
   name: string;
   email: string | null;
   avatar: string | null;
