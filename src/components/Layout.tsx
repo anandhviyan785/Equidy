@@ -52,7 +52,7 @@ export function Layout() {
           <button className="btn-ghost p-2" onClick={() => navigate("/")} aria-label="New chat"><SquarePen className="h-5 w-5" /></button>
         </header>
         {!isChat && <TickerTape />}
-        <main className="min-h-0 flex-1 overflow-y-auto" id="main">
+        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain" id="main">
           <Outlet />
         </main>
       </div>

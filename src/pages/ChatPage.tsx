@@ -6,6 +6,7 @@ import { regenerate, send, startConversation, stop, useRuns } from "@/lib/chatRu
 import { aiStatus, type AIStatus } from "@/lib/ai";
 import { Markdown } from "@/components/Markdown";
 import { Logo } from "@/components/ui";
+import { useMediaQuery } from "@/hooks";
 import { cn } from "@/lib/format";
 
 const SUGGESTIONS = [
@@ -48,36 +49,47 @@ export function ChatPage() {
   };
 
   if (!conv) {
+    const suggestions = (
+      <div className="mt-6 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        {SUGGESTIONS.map((s, i) => (
+          <button
+            key={s.title}
+            onClick={() => submit(s.title)}
+            style={{ animationDelay: `${80 + i * 40}ms` }}
+            className="card group flex items-start gap-3 p-3.5 text-left transition-colors hover:border-accent/40 hover:bg-elevated animate-fade-up"
+          >
+            <s.icon className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-accent" />
+            <span className="min-w-0">
+              <span className="block text-sm font-medium leading-snug">{s.title}</span>
+              <span className="mt-0.5 block text-xs text-muted max-sm:hidden">{s.hint}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    );
     return (
       <div className="flex h-full flex-col">
-        <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 py-10">
+        <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-6 lg:py-10">
           <div className="my-auto w-full max-w-3xl animate-fade-up">
-            <div className="mb-8 flex flex-col items-center text-center">
+            <div className="mb-6 flex flex-col items-center text-center lg:mb-8">
               <Logo className="mb-8 h-10 max-lg:hidden sm:h-12" />
-              <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-[40px] sm:leading-[1.15]">Your financial intelligence, reimagined.</h1>
-              <p className="mt-4 max-w-xl text-balance text-[15px] leading-relaxed text-muted">
+              <h1 className="text-balance text-[28px] font-semibold leading-tight tracking-tight sm:text-[40px] sm:leading-[1.15]">Your financial intelligence, reimagined.</h1>
+              <p className="mt-3 max-w-xl text-balance text-[15px] leading-relaxed text-muted lg:mt-4">
                 Ask anything about companies, markets or personal finance. Equidy analyses your portfolio, explains complex concepts and turns data into clear decisions.
               </p>
             </div>
-            <Composer onSubmit={submit} streaming={false} status={status} large />
-            <AiDisclaimer />
-            <div className="mt-6 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-              {SUGGESTIONS.map((s, i) => (
-                <button
-                  key={s.title}
-                  onClick={() => submit(s.title)}
-                  style={{ animationDelay: `${80 + i * 40}ms` }}
-                  className="card group flex items-start gap-3 p-3.5 text-left transition-colors hover:border-accent/40 hover:bg-elevated animate-fade-up"
-                >
-                  <s.icon className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-accent" />
-                  <span>
-                    <span className="block text-sm font-medium leading-snug">{s.title}</span>
-                    <span className="mt-0.5 block text-xs text-muted">{s.hint}</span>
-                  </span>
-                </button>
-              ))}
+            {/* Desktop: the message box sits in the middle of the page. */}
+            <div className="max-lg:hidden">
+              <Composer onSubmit={submit} streaming={false} status={status} large />
+              <AiDisclaimer />
             </div>
+            {suggestions}
           </div>
+        </div>
+        {/* Phones: the message box is pinned to the bottom, so it never needs scrolling to reach. */}
+        <div className="shrink-0 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+          <Composer onSubmit={submit} streaming={false} status={status} />
+          <AiDisclaimer />
         </div>
       </div>
     );
@@ -93,7 +105,7 @@ export function ChatPage() {
       </div>
       <div
         ref={scroller}
-        className="min-h-0 flex-1 overflow-y-auto"
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
         onScroll={(e) => {
           const el = e.currentTarget;
           stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
@@ -174,7 +186,9 @@ function Message({ m, streaming, canRegenerate, onRegenerate }: { m: ChatMessage
 function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t: string) => void; streaming: boolean; onStop?: () => void; status: AIStatus | null; large?: boolean }) {
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => { ref.current?.focus(); }, []);
+  const narrow = useMediaQuery("(max-width: 640px)");
+  // Focus on desktop only; on phones it would pop the keyboard over the page.
+  useEffect(() => { if (window.matchMedia?.("(pointer: fine)").matches) ref.current?.focus(); }, []);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -190,7 +204,8 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
   };
 
   return (
-    <div className={cn("card relative flex flex-col shadow-[0_8px_30px_rgb(0_0_0/0.12)] transition focus-within:border-accent/50", large ? "p-3" : "p-2")}>
+    // The large (home, desktop) box puts the send button on its own row; the compact box keeps it beside the text.
+    <div className={cn("card relative flex shadow-[0_8px_30px_rgb(0_0_0/0.12)] transition focus-within:border-accent/50", large ? "flex-col p-3" : "items-end gap-1 p-1.5 pl-2")}>
       <textarea
         ref={ref}
         rows={1}
@@ -199,12 +214,12 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); go(); }
         }}
-        placeholder="Ask Equidy about stocks, markets, or your portfolio…"
-        className={cn("w-full resize-none bg-transparent px-2 leading-relaxed outline-none placeholder:text-muted/70", large ? "min-h-[56px] py-2 text-base" : "py-1.5 text-[15px]")}
+        placeholder={narrow ? "Ask Equidy anything…" : "Ask Equidy about stocks, markets, or your portfolio…"}
+        className={cn("w-full resize-none bg-transparent px-2 leading-relaxed outline-none placeholder:text-muted/70", large ? "min-h-[56px] py-2 text-base" : "self-center py-1.5 text-[15px]")}
         aria-label="Message Equidy"
       />
-      <div className="flex items-center justify-between pl-1 pt-1">
-        <div className="text-[11px] text-muted">{large && status && (status.ai ? `Powered by Claude · ${status.model}` : "Offline analysis engine")}</div>
+      <div className={cn("flex shrink-0 items-center", large && "justify-between pl-1 pt-1")}>
+        {large && <div className="text-[11px] text-muted">{status && (status.ai ? `Powered by Claude · ${status.model}` : "Offline analysis engine")}</div>}
         {streaming ? (
           <button onClick={onStop} className="grid h-9 w-9 place-items-center rounded-full bg-fg text-bg transition hover:opacity-90" aria-label="Stop generating">
             <Square className="h-3.5 w-3.5 fill-current" />
