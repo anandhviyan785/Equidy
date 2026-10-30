@@ -142,7 +142,7 @@ export function LoginPage() {
           )}
 
           <p className="mt-8 text-xs leading-relaxed text-muted">
-            By continuing you agree to Equidy's <Link to="/privacy" className="underline underline-offset-2 hover:text-fg">Privacy Policy</Link>. Equidy provides financial information and education, not investment advice.
+            By continuing you agree to Equidy's <Link to="/terms" className="text-blue-500 hover:underline dark:text-blue-400">Terms &amp; Conditions</Link> and <Link to="/privacy" className="text-blue-500 hover:underline dark:text-blue-400">Privacy Policy</Link>. Equidy's AI can make mistakes and does not give financial advice.
           </p>
         </div>
       </section>

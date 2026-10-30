@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { ArrowUp, Square, Copy, Check, RotateCcw, Apple, Percent, PieChart, Scale, Activity, ShieldAlert, Cpu, WifiOff } from "lucide-react";
 import { useChats, type ChatMessage } from "@/store";
 import { regenerate, send, startConversation, stop, useRuns } from "@/lib/chatRunner";
@@ -60,6 +60,7 @@ export function ChatPage() {
               </p>
             </div>
             <Composer onSubmit={submit} streaming={false} status={status} large />
+            <AiDisclaimer />
             <div className="mt-6 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
               {SUGGESTIONS.map((s, i) => (
                 <button
@@ -113,7 +114,7 @@ export function ChatPage() {
       <div className="shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
         <div className="mx-auto max-w-3xl">
           <Composer onSubmit={submit} streaming={!!streamingId} onStop={() => stop(conv.id)} status={status} />
-          <p className="mt-2 text-center text-[11px] text-muted">Equidy can make mistakes. Educational information only — not investment advice.</p>
+          <AiDisclaimer />
         </div>
       </div>
     </div>
@@ -220,4 +221,14 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
 
 export function askEquidy(navigate: (to: string) => void, prompt: string) {
   navigate(`/c/${startConversation(prompt)}`);
+}
+
+/** Tiny notice under the message box: the AI can be wrong, with a link to the full terms. */
+function AiDisclaimer() {
+  return (
+    <p className="mt-2 text-center text-[10px] leading-snug text-muted">
+      Equidy's AI can make mistakes and is not financial advice. Check important information before acting on it.{" "}
+      <Link to="/terms" className="text-blue-500 hover:underline dark:text-blue-400">Terms &amp; Conditions</Link>
+    </p>
+  );
 }
