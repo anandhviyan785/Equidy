@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Star } from "lucide-react";
 import { INDICES, SECURITIES, type Sector } from "@/data/securities";
 import { history, intraday, sliceRange, RANGES, type Range } from "@/lib/market";
@@ -7,8 +7,10 @@ import { useMarket, usePortfolio } from "@/store";
 import { cn, price } from "@/lib/format";
 import { Change, ChangePill, Page, PageHeader, Segmented } from "@/components/ui";
 import { PriceChart, ReturnBars, Sparkline } from "@/components/charts";
+import { SymbolSearch } from "@/components/SymbolSearch";
 
 export function MarketsPage() {
+  const navigate = useNavigate();
   const prices = useMarket((s) => s.prices);
   const [sel, setSel] = useState(INDICES[0].symbol);
   const [range, setRange] = useState<Range>("3M");
@@ -34,6 +36,9 @@ export function MarketsPage() {
   return (
     <Page wide>
       <PageHeader title="Markets" subtitle="Indices, sectors and movers across equities, ETFs and crypto." />
+      <div className="mb-5 max-w-xl">
+        <SymbolSearch onPick={(sec) => navigate(`/symbol/${sec.symbol}`)} placeholder="Search stocks, ETFs or crypto by name or ticker…" />
+      </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {INDICES.map((i) => {

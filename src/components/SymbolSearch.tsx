@@ -42,6 +42,9 @@ export function SymbolSearch({ onPick, exclude = [], placeholder = "Search ticke
         role="combobox"
         aria-expanded={open}
       />
+      {open && q.trim() && results.length === 0 && (
+        <div className="card absolute z-30 mt-1.5 w-full px-3.5 py-3 text-sm text-muted shadow-xl">No stocks match "{q.trim()}".</div>
+      )}
       {open && results.length > 0 && (
         <ul className="card absolute z-30 mt-1.5 max-h-72 w-full overflow-y-auto p-1 shadow-xl">
           {results.map((s, i) => {
