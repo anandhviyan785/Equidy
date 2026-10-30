@@ -259,9 +259,9 @@ function marketAnswer(snap: Snapshot): string {
   ].join("\n");
 }
 
-function helpAnswer(): string {
+function helpAnswer(name: string): string {
   return [
-    "I can help with **analysis, education and portfolio insight**. Try asking:",
+    `I'm not quite sure what you mean${name ? `, ${name}` : ""}, but I'd love to help. Here are a few things I'm great at:`,
     "",
     "- *Analyze NVIDIA's financial performance*",
     "- *Compare MSFT vs GOOGL*",
@@ -269,14 +269,88 @@ function helpAnswer(): string {
     "- *If I invest $15,000 plus $400 per month at 8% for 25 years, what do I end up with?*",
     "- *Explain the Sharpe ratio / P/E / ETFs / bonds / dividends*",
     "- *What are the markets doing today?*",
-    "",
-    "> Running in **offline mode**. Add `ANTHROPIC_API_KEY` on the server to enable full conversational answers powered by Claude.",
   ].join("\n");
 }
 
+// ---------------- conversation ----------------
+
+const pick = <T,>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)];
+const FINANCE_WORDS = /\b(stock|share|market|portfolio|invest|fund|etf|bond|dividend|interest|price|analy[sz]e|compare|risk|return|crypto|bitcoin|money|budget|save|saving|retire|tax|inflation|p\/e|ratio|earnings|revenue)/i;
+
+/** Friendly replies for greetings, feelings and small talk. Returns null for real finance questions. */
+export function smallTalk(text: string, snap: Pick<Snapshot, "userName" | "total" | "rows">): string | null {
+  const q = text.toLowerCase().replace(/[^\p{L}\p{N}\s'?!]/gu, " ").replace(/\s+/g, " ").trim();
+  const name = snap.userName ? snap.userName.split(" ")[0] : "";
+  const you = name ? `, ${name}` : "";
+  const words = q.split(" ").filter(Boolean);
+  const isFinance = FINANCE_WORDS.test(text);
+  const short = words.length <= 8;
+
+  if (/^(hi|hii+|hello|hey+|heya|hiya|yo|sup|howdy|greetings|good (morning|afternoon|evening|day)|what'?s up|wassup)\b/.test(q) && short && !isFinance) {
+    const hour = new Date().getHours();
+    const part = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+    const portfolioLine = snap.rows.length
+      ? `Your portfolio is ${snap.total.dayChange >= 0 ? "up" : "down"} ${Math.abs(snap.total.dayChangePct * 100).toFixed(2)}% today${snap.total.dayChange >= 0 ? " — nice!" : ", but one day is just one day."}`
+      : "Your portfolio is a blank canvas right now. Want help picking your first few holdings to research?";
+    return pick([
+      `Hey${you}! 👋 Great to see you. ${portfolioLine} What's on your mind?`,
+      `Hi${you}! Good ${part} 😊 ${portfolioLine} How can I help today?`,
+      `Hello${you}! I'm really glad you stopped by. ${portfolioLine} Anything you'd like to dig into?`,
+    ]);
+  }
+  if (/\b(how are you|how r u|how are u|how's it going|hows it going|how do you do|how have you been|you good)\b/.test(q)) {
+    return pick([
+      `I'm doing great, thanks for asking${you}! 😊 Honestly, I get a little excited every time the markets open. How are *you* doing?`,
+      `Pretty wonderful${you} — I've been watching the markets tick all day, which is my idea of a good time. How about you? Anything I can help with?`,
+    ]);
+  }
+  if (/\b(thank|thanks|thx|ty|cheers|appreciate)\b/.test(q) && short) {
+    return pick([`You're so welcome${you}! 😊 That's what I'm here for.`, `Anytime${you}! Happy to help — come back whenever something's on your mind.`, `My pleasure${you}! 🙌 Let me know if there's anything else.`]);
+  }
+  if (/^(bye|goodbye|see you|see ya|cya|good night|gn|later|catch you later)\b/.test(q) && short) {
+    return pick([`Bye${you}! 👋 Take care, and may your portfolio be green tomorrow.`, `See you soon${you}! It was lovely chatting.`, `Good night${you}! 🌙 The markets will still be here in the morning.`]);
+  }
+  if (/\b(who are you|what are you|what can you do|your name|are you (a |an )?(ai|bot|robot|human))\b/.test(q)) {
+    return `I'm **Equidy**, your financial sidekick${you}! 🤖📈 I can analyse companies, explain money concepts in plain English, run the numbers on your investments and review your portfolio's risk. I'm an AI, so I don't have a bank account of my own — but I genuinely enjoy this stuff. What would you like to explore?`;
+  }
+  if (/\b(sad|stressed|stress|anxious|worried|scared|nervous|upset|depressed|tired|lonely|bad day|rough day|panic)\b/.test(q) && !/\b(sad|stress)\w* test\b/.test(q)) {
+    return `I'm really sorry you're feeling that way${you}. 💛 That's completely understandable — money and markets can be stressful, and so can life in general. Take a breath; you don't have to figure everything out today.\n\nIf it's about your investments, I'm happy to walk through things calmly with you, one step at a time. And if it's something else, it's okay to step away from the charts for a bit. I'm here whenever you want to talk.`;
+  }
+  if (/\b(happy|excited|great news|awesome|amazing|i got (a |the )?(job|raise|promotion|bonus))\b/.test(q) && short && !isFinance) {
+    return `That's wonderful${you}! 🎉 I love hearing that. If there's a raise or bonus involved, I'd be thrilled to help you think about making that money work for you.`;
+  }
+  if (/\b(joke|funny|make me laugh)\b/.test(q)) {
+    return pick([
+      `Here's one${you}: Why did the stock market go to therapy? It had too many *depressions*. 😄`,
+      `Okay${you}: I told my portfolio a joke… it didn't laugh, but it did *split*. 📈😄`,
+      `Why don't bonds ever get invited to parties${you}? They're too *fixed* in their ways. 😂`,
+    ]);
+  }
+  if (/\b(love you|you're (great|awesome|amazing|the best)|good bot|nice work|well done)\b/.test(q)) {
+    return `Aww, thank you${you}! 🥹 That genuinely made my day. I'm here whenever you need me.`;
+  }
+  if (/\b(bored|boring)\b/.test(q) && short) {
+    return `Bored${you}? Let's fix that! 😄 Want a fun fact? If you'd invested $1,000 in the S&P 500 in 1990 and reinvested dividends, it'd be worth around $25,000 today. Ask me anything — I promise to keep it interesting.`;
+  }
+  // Short, clearly non-financial chit-chat: answer warmly and gently steer back.
+  const knownTopic = CONCEPTS.some((c) => c.keys.test(text)) || tickerMentions(text).length > 0 || /\b(compound|market|today|index)\b/.test(q);
+  if (short && !isFinance && !knownTopic && words.length >= 2) {
+    return pick([
+      `Ha, I like where your head's at${you}! 😄 I'm best with money, markets and investing, but I'm always up for a chat. Is there anything finance-related on your mind?`,
+      `That's a fun one${you}! I'm more of a numbers-and-markets kind of AI, so I might not be much help there — but if you want to talk stocks, savings or your portfolio, I'm all yours. 😊`,
+    ]);
+  }
+  return null;
+}
+
 export function answer(question: string, snap: Snapshot): string {
+  const chat = smallTalk(question, snap);
+  if (chat) return chat;
   const q = question.toLowerCase();
   const tickers = tickerMentions(question);
+  const first = snap.userName ? snap.userName.split(" ")[0] : "";
+  // "Hi, analyse Apple" gets a friendly hello before the analysis.
+  const hello = /^(hi|hello|hey|good (morning|afternoon|evening))\b/i.test(question.trim()) ? `Hi${first ? ` ${first}` : ""}! 👋 Happy to help with that.\n\n` : "";
   let body: string;
   if (/\b(compound|interest|grow|future value|invest \$?\d|rule of 72)\b/.test(q) && !tickers.length) body = compoundAnswer(question);
   else if (/(\bvs\.?\b|versus|compare)/.test(q) && tickers.length >= 2) body = compare(tickers[0], tickers[1], snap);
@@ -285,9 +359,10 @@ export function answer(question: string, snap: Snapshot): string {
   else if (/\b(market|today|indices|index|movers|s&p)\b/.test(q)) body = marketAnswer(snap);
   else {
     const c = CONCEPTS.find((x) => x.keys.test(question));
-    body = c ? `## ${c.title}\n${c.body}` : helpAnswer();
+    if (!c) return hello + helpAnswer(first);
+    body = `## ${c.title}\n${c.body}`;
   }
-  return body + DISCLAIMER;
+  return hello + body + DISCLAIMER;
 }
 
 /** Streams text in small chunks to mimic token streaming. */

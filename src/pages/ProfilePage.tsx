@@ -32,7 +32,6 @@ export function ProfilePage() {
           <div className="text-sm text-muted">{profile.email}</div>
           {user && <div className="mt-1 text-xs text-muted">Signed in with {providerLabel(user.provider)}{user.demo ? " · demo account" : ""}</div>}
         </div>
-        <span className="chip border-accent/40 text-accent">{profile.plan} plan</span>
         <button className="btn-outline" onClick={async () => { await signOut(); navigate("/login", { replace: true }); }}>
           <LogOut className="h-4 w-4" /> Sign out
         </button>

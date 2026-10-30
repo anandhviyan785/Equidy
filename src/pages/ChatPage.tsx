@@ -144,11 +144,9 @@ function Message({ m, streaming, canRegenerate, onRegenerate }: { m: ChatMessage
     try { await navigator.clipboard.writeText(m.content); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* clipboard unavailable */ }
   };
   return (
-    <div className="group flex gap-4 animate-fade-up">
-      <div className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line bg-surface">
-        <Logo compact className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
+    // Replies are plain text on the page; only the user's messages sit in a box.
+    <div className="group animate-fade-up">
+      <div className="min-w-0">
         {m.content ? (
           <div className={cn(m.error && "text-down")}>
             <Markdown text={m.content} />

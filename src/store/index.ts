@@ -25,7 +25,7 @@ interface SettingsState {
   liveTicks: boolean;
   responseStyle: "concise" | "balanced" | "detailed";
   riskProfile: "conservative" | "moderate" | "aggressive";
-  profile: { name: string; email: string; plan: string };
+  profile: { name: string; email: string };
   set: (p: Partial<Omit<SettingsState, "set">>) => void;
 }
 
@@ -38,7 +38,7 @@ export const useSettings = create<SettingsState>()(
       liveTicks: true,
       responseStyle: "balanced",
       riskProfile: "moderate",
-      profile: { name: "Alex Morgan", email: "alex@equidy.ai", plan: "Pro" },
+      profile: { name: "", email: "" },
       set: (p) => set(p),
     }),
     { name: "equidy.settings", storage },

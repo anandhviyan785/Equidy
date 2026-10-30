@@ -201,7 +201,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
             {!isCollapsed && (
               <span className="min-w-0 text-left">
                 <span className="block truncate text-sm font-medium">{profile.name}</span>
-                <span className="block truncate text-xs text-muted">{profile.plan} plan</span>
+                <span className="block truncate text-xs text-muted">{profile.email}</span>
               </span>
             )}
           </NavLink>

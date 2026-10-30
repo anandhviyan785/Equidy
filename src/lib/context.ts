@@ -7,7 +7,7 @@ import { money, pct, price } from "./format";
 export function buildSnapshot() {
   const { holdings, watchlist } = usePortfolio.getState();
   const { prices } = useMarket.getState();
-  const { riskFree, riskProfile, responseStyle } = useSettings.getState();
+  const { riskFree, riskProfile, responseStyle, profile } = useSettings.getState();
   const rows = positions(holdings, prices);
   const total = summarize(rows);
   const metrics = riskMetrics(portfolioHistory(holdings).slice(-253), benchmarkHistory().slice(-253), rows.map((r) => r.weight), riskFree);
@@ -20,6 +20,7 @@ export function buildSnapshot() {
     indices: INDICES.map((i) => ({ ...i, ...prices[i.symbol] })),
     prices,
     riskProfile,
+    userName: profile.name.trim(),
     responseStyle,
   };
 }
@@ -30,6 +31,7 @@ export type Snapshot = ReturnType<typeof buildSnapshot>;
 export function snapshotToText(s: Snapshot): string {
   const lines: string[] = [];
   lines.push(`Date: ${new Date().toDateString()}`);
+  if (s.userName) lines.push(`User's display name: ${s.userName}`);
   lines.push(`Investor risk profile: ${s.riskProfile}. Preferred answer length: ${s.responseStyle}.`);
   lines.push(`\nPORTFOLIO — value ${money(s.total.value)}, cost ${money(s.total.cost)}, unrealised P/L ${money(s.total.pnl, { sign: true })} (${pct(s.total.pnlPct)}), today ${money(s.total.dayChange, { sign: true })} (${pct(s.total.dayChangePct)})`);
   lines.push("symbol | shares | avg cost | price | value | weight | P/L% | sector");

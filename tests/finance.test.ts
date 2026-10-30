@@ -60,3 +60,34 @@ describe("offline engine", () => {
     expect(answer("What is a P/E ratio?", snap)).toContain("Price-to-Earnings");
   });
 });
+
+describe("conversation", () => {
+  const snap = {
+    rows: [], total: { value: 0, cost: 0, pnl: 0, pnlPct: 0, dayChange: 0, dayChangePct: 0 }, metrics: null, sectors: [], watchlist: [], indices: [],
+    prices: new Proxy({}, { get: () => ({ price: 100, prevClose: 99 }) }), riskProfile: "moderate", responseStyle: "balanced", userName: "Anandh Sridhar",
+  } as unknown as Snapshot;
+
+  it("greets the user by first name, without finance boilerplate", () => {
+    for (const hi of ["hi", "Hello!", "hey there", "good morning"]) {
+      const r = answer(hi, snap);
+      expect(r).toContain("Anandh");
+      expect(r).not.toContain("not personalised investment advice");
+    }
+  });
+
+  it("responds warmly to feelings, thanks and off-topic chat", () => {
+    expect(answer("how are you?", snap)).toMatch(/thanks for asking|wonderful/);
+    expect(answer("thanks!", snap)).toContain("Anandh");
+    expect(answer("I'm so stressed today", snap)).toContain("sorry you're feeling");
+    expect(answer("what's your favourite pizza", snap)).toMatch(/Anandh.*(chat|numbers-and-markets)/s);
+    expect(answer("what is diversification", snap)).toContain("## Diversification");
+    expect(answer("tell me a joke", snap)).toContain("Anandh");
+  });
+
+  it("still answers finance questions, with a hello when greeted", () => {
+    const r = answer("hi, analyze apple", snap);
+    expect(r).toContain("Hi Anandh!");
+    expect(r).toContain("Apple Inc. (AAPL)");
+    expect(answer("Explain how compound interest works", snap)).toContain("compound interest");
+  });
+});
