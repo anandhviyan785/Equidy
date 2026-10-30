@@ -10,9 +10,11 @@ import { ResearchPage } from "@/pages/ResearchPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { LoginPage } from "@/pages/LoginPage";
+import { PrivacyPage } from "@/pages/PrivacyPage";
 
 const routes = [
   { path: "/login", element: <LoginPage /> },
+  { path: "/privacy", element: <PrivacyPage /> },
   {
     path: "/",
     element: <Layout />,

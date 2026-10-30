@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
-import { signOut, providerLabel } from "@/lib/auth";
+import { LogOut, Trash2 } from "lucide-react";
+import { deleteAccount, signOut, providerLabel } from "@/lib/auth";
 import { useAuth, useChats, useMarket, usePortfolio, useSettings } from "@/store";
 import { positions, summarize } from "@/lib/finance";
 import { money } from "@/lib/format";
@@ -11,6 +11,9 @@ export function ProfilePage() {
   const { profile, riskProfile, set } = useSettings();
   const user = useAuth((s) => s.user);
   const navigate = useNavigate();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const holdings = usePortfolio((s) => s.holdings);
   const watch = usePortfolio((s) => s.watchlist);
   const prices = useMarket((s) => s.prices);
@@ -64,6 +67,37 @@ export function ProfilePage() {
           <p className="mt-2 text-xs text-muted">Equidy uses your risk profile to tailor portfolio analysis. Manage more in <Link to="/settings" className="text-accent">Settings</Link>.</p>
         </div>
       </div>
+      <section className="card mt-4 p-6">
+        <h2 className="font-medium">Delete account</h2>
+        <p className="mt-1 text-sm text-muted">Permanently delete your Equidy account, along with the portfolio and chats saved in this browser. This can't be undone.</p>
+        {deleteError && <p role="alert" className="mt-3 text-sm text-down">{deleteError}</p>}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {confirmDelete ? (
+            <>
+              <button className="btn-ghost" onClick={() => setConfirmDelete(false)} disabled={deleting}>Cancel</button>
+              <button
+                className="btn bg-down text-white hover:bg-down/90"
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true);
+                  setDeleteError(null);
+                  try {
+                    await deleteAccount();
+                    navigate("/login", { replace: true });
+                  } catch (err) {
+                    setDeleteError((err as Error).message);
+                    setDeleting(false);
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4" /> {deleting ? "Deleting…" : "Yes, delete my account"}
+              </button>
+            </>
+          ) : (
+            <button className="btn-outline text-down" onClick={() => setConfirmDelete(true)}><Trash2 className="h-4 w-4" /> Delete account</button>
+          )}
+        </div>
+      </section>
     </Page>
   );
 }

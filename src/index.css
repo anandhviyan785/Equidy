@@ -59,3 +59,10 @@
 .prose-equidy thead { @apply border-line; }
 .prose-equidy :not(pre) > code { @apply rounded bg-elevated px-1 py-0.5 text-[0.85em]; }
 .prose-equidy pre { @apply bg-elevated text-fg border border-line rounded-xl; }
+
+/* Touch screens: bigger tap targets, and 16px form text so iOS doesn't zoom in on focus. */
+@media (pointer: coarse) {
+  input, textarea, select { font-size: 16px !important; }
+  .btn-ghost { min-height: 40px; min-width: 40px; }
+  .seg-btn { min-height: 34px; }
+}

@@ -64,7 +64,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
       {mobileOpen && <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={onCloseMobile} />}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex flex-col border-r border-line bg-surface transition-[width,transform] duration-300 ease-out lg:static lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex flex-col pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] border-r border-line bg-surface transition-[width,transform] duration-300 ease-out lg:static lg:translate-x-0",
           isCollapsed ? "w-[64px]" : "w-[272px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}

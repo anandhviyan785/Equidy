@@ -101,3 +101,10 @@ export function rateLimit(key: string, max = 10, windowMs = 10 * 60_000) {
   }
   if (++a.n > max) throw new AccountError("Too many attempts. Please wait a few minutes and try again.", 429);
 }
+
+/** Permanently removes an email account. */
+export async function deleteAccount(id: string) {
+  if (!sql) return;
+  await ensureTable();
+  await sql`DELETE FROM equidy_users WHERE id = ${id}`;
+}

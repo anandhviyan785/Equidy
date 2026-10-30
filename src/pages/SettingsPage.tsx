@@ -97,7 +97,7 @@ export function SettingsPage() {
           </Row>
         </Section>
 
-        <Section title="Data" desc="Everything is stored locally in this browser.">
+        <Section title="Data" desc="Your portfolio, chats and settings are stored in this browser.">
           <Row label="Export data" hint="Download settings, portfolio and conversations as JSON.">
             <button className="btn-outline" onClick={exportData}><Download className="h-4 w-4" /> Export</button>
           </Row>

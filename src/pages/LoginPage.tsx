@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Info, Loader2 } from "lucide-react";
 import { INDICES } from "@/data/securities";
 import { history } from "@/lib/market";
@@ -142,7 +142,7 @@ export function LoginPage() {
           )}
 
           <p className="mt-8 text-xs leading-relaxed text-muted">
-            By continuing you agree to Equidy's Terms of Service and Privacy Policy. Equidy provides financial information and education, not investment advice.
+            By continuing you agree to Equidy's <Link to="/privacy" className="underline underline-offset-2 hover:text-fg">Privacy Policy</Link>. Equidy provides financial information and education, not investment advice.
           </p>
         </div>
       </section>

@@ -15,6 +15,7 @@ vi.mock("@neondatabase/serverless", () => {
         users.push(row);
         return [{ id: row.id, email: row.email, name: row.name }];
       }
+      if (q.includes("DELETE")) { const i = users.findIndex((u) => u.id === v[0]); if (i >= 0) users.splice(i, 1); return []; }
       if (q.includes("SELECT")) return users.filter((u) => u.email === v[0]);
       throw new Error("unexpected query " + q);
     },
@@ -75,5 +76,15 @@ describe("email accounts", () => {
     const rows = await sql(Object.assign(["SELECT ", ""], { raw: [] }) as unknown as TemplateStringsArray, "ada@example.com");
     expect(rows[0].password_hash).toMatch(/^scrypt:/);
     expect(rows[0].password_hash).not.toContain("correct horse");
+  });
+});
+
+describe("account deletion", () => {
+  it("deletes the signed-in account so it can no longer sign in", async () => {
+    const res = await post("/api/auth/signup", { name: "Del", email: "del@example.com", password: "password123" });
+    const cookie = res.headers.get("set-cookie")!.split(";")[0];
+    expect((await post("/api/auth/delete", {})).status).toBe(401);
+    expect((await post("/api/auth/delete", {}, cookie)).status).toBe(200);
+    expect((await post("/api/auth/signin", { email: "del@example.com", password: "password123" })).status).toBe(401);
   });
 });

@@ -1,6 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import crypto from "node:crypto";
-import { AccountError, accountsEnabled, createAccount, rateLimit, verifyAccount } from "./accounts.js";
+import { AccountError, accountsEnabled, createAccount, deleteAccount, rateLimit, verifyAccount } from "./accounts.js";
 import { Apple, Google, MicrosoftEntraId, OAuth2RequestError, decodeIdToken, generateCodeVerifier, generateState } from "arctic";
 
 // OAuth sign-in with Google, Microsoft (Entra ID) and Apple.
@@ -143,6 +143,20 @@ function accountRoute(action: "signup" | "signin") {
 }
 
 authRouter.post("/signup", express.json(), accountRoute("signup"));
+
+// Account deletion (required by the App Store and Google Play for apps with sign-up).
+authRouter.post("/delete", async (req, res) => {
+  const user = readSession(req);
+  if (!user) return void res.status(401).json({ error: "Please sign in to continue." });
+  try {
+    if (user.provider === "email") await deleteAccount(user.id.replace(/^email:/, ""));
+    setCookie(res, SESSION_COOKIE, "", { maxAge: 0 });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[equidy] account deletion failed:", err);
+    res.status(500).json({ error: "We couldn't delete your account. Please try again." });
+  }
+});
 authRouter.post("/signin", express.json(), accountRoute("signin"));
 
 authRouter.get("/:provider/start", (req, res) => {

@@ -53,7 +53,7 @@ export function ChatPage() {
         <div className="flex flex-1 flex-col items-center overflow-y-auto px-4 py-10">
           <div className="my-auto w-full max-w-3xl animate-fade-up">
             <div className="mb-8 flex flex-col items-center text-center">
-              <Logo className="mb-8 h-10 sm:h-12" />
+              <Logo className="mb-8 h-10 max-lg:hidden sm:h-12" />
               <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-[40px] sm:leading-[1.15]">Your financial intelligence, reimagined.</h1>
               <p className="mt-4 max-w-xl text-balance text-[15px] leading-relaxed text-muted">
                 Ask anything about companies, markets or personal finance. Equidy analyses your portfolio, explains complex concepts and turns data into clear decisions.
@@ -110,7 +110,7 @@ export function ChatPage() {
           ))}
         </div>
       </div>
-      <div className="shrink-0 px-4 pb-4 pt-2">
+      <div className="shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
         <div className="mx-auto max-w-3xl">
           <Composer onSubmit={submit} streaming={!!streamingId} onStop={() => stop(conv.id)} status={status} />
           <p className="mt-2 text-center text-[11px] text-muted">Equidy can make mistakes. Educational information only — not investment advice.</p>

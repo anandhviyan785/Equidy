@@ -80,3 +80,15 @@ export async function signOut() {
   } catch { /* server unreachable: local sign-out still applies */ }
   useAuth.getState().setUser(null);
 }
+
+/** Permanently deletes the account and clears this browser's Equidy data. */
+export async function deleteAccount() {
+  const res = await fetch("/api/auth/delete", { method: "POST", credentials: "same-origin" }).catch(() => null);
+  if (res && !res.ok && res.status !== 401) {
+    const j = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(j.error || "We couldn't delete your account. Please try again.");
+  }
+  usePortfolio.setState({ holdings: [], owner: null });
+  useChats.getState().clearAll();
+  useAuth.getState().setUser(null);
+}
