@@ -16,14 +16,19 @@ export interface SessionUser {
   avatar: string | null;
 }
 
+// Values pasted into hosting dashboards often pick up stray whitespace or quotes; strip them.
+const env: Record<string, string | undefined> = Object.fromEntries(
+  Object.entries(process.env).map(([k, v]) => [k, v?.trim().replace(/^(["'])(.*)\1$/s, "$2").trim()]),
+);
+
 // On Vercel the production domain is provided automatically, so APP_URL is optional there.
 const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined;
-const APP_URL = (process.env.APP_URL ?? vercelUrl ?? "http://localhost:5173").replace(/\/$/, "");
+const APP_URL = (env.APP_URL || vercelUrl || "http://localhost:5173").replace(/\/$/, "");
 const SECURE = APP_URL.startsWith("https://");
 const SESSION_COOKIE = "equidy_session";
 const SESSION_DAYS = 30;
-const SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
-if (!process.env.SESSION_SECRET) console.warn("[equidy] SESSION_SECRET not set — sessions will reset when the server restarts.");
+const SECRET = env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+if (!env.SESSION_SECRET) console.warn("[equidy] SESSION_SECRET not set — sessions will reset when the server restarts.");
 
 const callback = (p: ProviderId) => `${APP_URL}/api/auth/${p}/callback`;
 
@@ -32,7 +37,6 @@ function pemToPkcs8(pem: string): Uint8Array {
   return new Uint8Array(Buffer.from(b64, "base64"));
 }
 
-const env = process.env;
 const google = env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET ? new Google(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, callback("google")) : null;
 const microsoft =
   env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET
