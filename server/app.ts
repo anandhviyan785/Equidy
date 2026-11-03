@@ -37,6 +37,36 @@ app.get("/api/health", (_req, res) => {
 
 type Incoming = { role: "user" | "assistant"; content: string };
 
+// Short summary title for a conversation, shown in the sidebar.
+app.post("/api/title", requireAuth, async (req, res) => {
+  if (!client) return void res.status(503).json({ error: "Claude is not configured on this server." });
+  const { messages } = req.body as { messages?: Incoming[] };
+  const transcript = (messages ?? [])
+    .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+    .slice(0, 6)
+    .map((m) => `${m.role === "user" ? "User" : "Equidy"}: ${m.content.slice(0, 1500)}`)
+    .join("\n\n");
+  if (!transcript) return void res.status(400).json({ error: "No messages to summarise." });
+  try {
+    const msg = await client.beta.messages.create({
+      model: MODEL,
+      max_tokens: 2000,
+      output_config: { effort: "low" },
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      system:
+        "You name chat conversations for a sidebar. Reply with only a title of 2 to 6 words that summarises what the conversation is about, in Title Case (capitalise every word). No quotes, no emoji, no trailing punctuation. If it is only greetings or small talk, reply: Casual Chat.",
+      messages: [{ role: "user", content: `Conversation:\n\n${transcript}\n\nTitle:` }],
+    });
+    if (msg.stop_reason === "refusal") return void res.status(422).json({ error: "No title." });
+    const text = msg.content.map((b) => (b.type === "text" ? b.text : "")).join("").trim();
+    res.json({ title: text.slice(0, 80) });
+  } catch (err) {
+    console.error("[equidy] title error:", err);
+    res.status(502).json({ error: "Couldn't create a title." });
+  }
+});
+
 app.post("/api/chat", requireAuth, async (req, res) => {
   if (!client) {
     res.status(503).json({ error: "Claude is not configured on this server." });

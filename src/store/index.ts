@@ -115,12 +115,14 @@ export interface Conversation {
   createdAt: number;
   updatedAt: number;
   pinned?: boolean;
+  titleLocked?: boolean; // renamed by the user, so automatic titles leave it alone
 }
 
 interface ChatState {
   conversations: Conversation[];
   create: (title?: string) => string;
   rename: (id: string, title: string) => void;
+  setAutoTitle: (id: string, title: string) => void;
   remove: (id: string) => void;
   togglePin: (id: string) => void;
   append: (id: string, m: ChatMessage) => void;
@@ -139,7 +141,9 @@ export const useChats = create<ChatState>()(
         set((s) => ({ conversations: [{ id, title, messages: [], createdAt: now, updatedAt: now }, ...s.conversations] }));
         return id;
       },
-      rename: (id, title) => set((s) => ({ conversations: s.conversations.map((c) => (c.id === id ? { ...c, title } : c)) })),
+      rename: (id, title) => set((s) => ({ conversations: s.conversations.map((c) => (c.id === id ? { ...c, title, titleLocked: true } : c)) })),
+      setAutoTitle: (id, title) =>
+        set((s) => ({ conversations: s.conversations.map((c) => (c.id === id && !c.titleLocked && c.title !== title ? { ...c, title } : c)) })),
       remove: (id) => set((s) => ({ conversations: s.conversations.filter((c) => c.id !== id) })),
       togglePin: (id) => set((s) => ({ conversations: s.conversations.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c)) })),
       append: (id, m) =>

@@ -7,6 +7,7 @@ import { TickerTape } from "./TickerTape";
 import { useLiveTicks, useThemeSync } from "@/hooks";
 import { useAuth } from "@/store";
 import { loadAuth } from "@/lib/auth";
+import { retitleExisting } from "@/lib/chatRunner";
 
 function readCollapsed() {
   try { return localStorage.getItem("equidy.sidebar") === "1"; } catch { return false; }
@@ -22,7 +23,7 @@ export function Layout() {
   const isChat = location.pathname === "/" || location.pathname.startsWith("/c/");
   const user = useAuth((s) => s.user);
   const checked = useAuth((s) => s.checked);
-  useEffect(() => { void loadAuth(); }, []);
+  useEffect(() => { void loadAuth(); retitleExisting(); }, []);
 
   useEffect(() => {
     try { localStorage.setItem("equidy.sidebar", collapsed ? "1" : "0"); } catch { /* storage unavailable */ }

@@ -1,5 +1,6 @@
 import { answer, streamText, tickerMentions } from "./engine";
 import { buildSnapshot, snapshotToText } from "./context";
+import { cleanTitle } from "./titles";
 
 export interface AIStatus {
   online: boolean; // backend reachable
@@ -91,8 +92,21 @@ function safeError(raw: string) {
   }
 }
 
-/** Short title from the first user message. */
-export function titleFrom(text: string) {
-  const clean = text.replace(/\s+/g, " ").trim().replace(/[?.!]+$/, "");
-  return clean.length > 48 ? clean.slice(0, 46).trimEnd() + "…" : clean || "New conversation";
+/** Asks Claude (through the server) for a summary title; null when Claude isn't available. */
+export async function aiTitle(messages: { role: "user" | "assistant"; content: string }[]): Promise<string | null> {
+  const status = await aiStatus();
+  if (!status.ai) return null;
+  try {
+    const res = await fetch("/api/title", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!res.ok) return null;
+    const { title } = (await res.json()) as { title?: string };
+    return title ? cleanTitle(title) || null : null;
+  } catch {
+    return null;
+  }
 }

@@ -32,7 +32,7 @@ const CONCEPTS: { keys: RegExp; title: string; body: string }[] = [
     body: "**Dollar-cost averaging (DCA)** means investing a fixed amount at regular intervals regardless of price. You automatically buy more shares when prices are low and fewer when high.\n\n- Removes the pressure of timing the market\n- Builds discipline and habit\n- Historically, lump-sum investing wins ~2/3 of the time because markets tend to rise — but DCA reduces regret and drawdown risk for new money.",
   },
   {
-    keys: /\b(sharpe)\b/i,
+    keys: /\b(sharpe|sortino)\b/i,
     title: "Sharpe ratio",
     body: "The **Sharpe ratio** measures return per unit of risk:\n\n`Sharpe = (Portfolio return − Risk-free rate) ÷ Volatility`\n\n- **< 0.5** — poor risk-adjusted performance\n- **0.5 – 1.0** — acceptable\n- **1.0 – 2.0** — good\n- **> 2.0** — excellent (and rare over long periods)\n\nThe **Sortino ratio** is a variant that only penalises downside volatility.",
   },
@@ -376,3 +376,6 @@ export async function streamText(text: string, onDelta: (t: string) => void, sig
 }
 
 export { tickerMentions };
+
+/** Title of the finance concept a message asks about, if any. */
+export const conceptTitle = (text: string) => CONCEPTS.find((c) => c.keys.test(text))?.title;

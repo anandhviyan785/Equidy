@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { useChats, type ChatMessage } from "@/store";
-import { streamChat, titleFrom } from "./ai";
+import { aiTitle, streamChat } from "./ai";
+import { summarizeTitle } from "./titles";
 import { uid } from "./format";
 
 interface RunState {
@@ -16,8 +17,6 @@ export async function send(conversationId: string, text?: string) {
   if (controllers.has(conversationId)) return;
 
   if (text !== undefined) {
-    const conv = chats.conversations.find((c) => c.id === conversationId);
-    if (conv && conv.messages.length === 0) chats.rename(conversationId, titleFrom(text));
     chats.append(conversationId, { id: uid(), role: "user", content: text, createdAt: Date.now() });
   }
 
@@ -69,6 +68,7 @@ export async function send(conversationId: string, text?: string) {
       delete next[conversationId];
       return { streaming: next };
     });
+    void autoTitle(conversationId);
   }
 }
 
@@ -86,7 +86,29 @@ export function regenerate(conversationId: string) {
 
 /** Start a brand-new conversation from the home screen. */
 export function startConversation(text: string) {
-  const id = useChats.getState().create(titleFrom(text));
+  const id = useChats.getState().create(summarizeTitle([{ role: "user", content: text }]));
   void send(id, text);
   return id;
+}
+
+/**
+ * Keeps the sidebar title a summary of the chat: refined after each of the first few replies
+ * (so "hi" becomes "Apple Financial Analysis" once the topic appears), and never after a manual rename.
+ */
+async function autoTitle(conversationId: string) {
+  const conv = useChats.getState().conversations.find((c) => c.id === conversationId);
+  if (!conv || conv.titleLocked) return;
+  const history = conv.messages.filter((m) => !m.error && m.content).map(({ role, content }) => ({ role, content }));
+  if (history.filter((m) => m.role === "user").length > 3) return;
+  const local = summarizeTitle(history);
+  useChats.getState().setAutoTitle(conversationId, local);
+  const fromAi = await aiTitle(history);
+  if (fromAi) useChats.getState().setAutoTitle(conversationId, fromAi);
+}
+
+/** Gives older chats (named after their first message) a summary title. */
+export function retitleExisting() {
+  for (const c of useChats.getState().conversations) {
+    if (!c.titleLocked && c.messages.length) useChats.getState().setAutoTitle(c.id, summarizeTitle(c.messages));
+  }
 }
