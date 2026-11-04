@@ -23,11 +23,11 @@ export function PrivacyPage() {
 
           <h2>What we collect</h2>
           <ul>
-            <li><strong>Account details.</strong> When you create an account: your name, email address and password. Accounts are managed by our authentication provider, Supabase, which stores passwords only as a salted one-way hash; we can never see them.</li>
+            <li><strong>Account details.</strong> When you create an account: your name, email address and password. Passwords are stored only as a salted one-way hash; we can never see them.</li>
             <li><strong>Sign-in with Google, Microsoft or Apple.</strong> If you use one of these, we receive your name, email address and, where provided, profile photo. We do not receive your password for those services.</li>
-            <li><strong>Your portfolio, watchlist, chats and settings.</strong> These are stored in your browser and, when you are signed in, saved to your account in our database (hosted by Supabase) so they are available on your other devices.</li>
+            <li><strong>Your portfolio, watchlist, chats and settings.</strong> These are stored in your browser and, when you are signed in, saved to your account in our database so they are available on your other devices.</li>
             <li><strong>Bank and brokerage connections.</strong> If you choose to link an account, we use Plaid to connect to your bank. We receive account names, the last digits of account numbers, balances, recent transactions and investment holdings. We never see your bank password. The access key Plaid gives us is stored encrypted, and you can disconnect at any time from the Banking page.</li>
-            <li><strong>Questions you ask the assistant.</strong> When the AI assistant is on, your message, the conversation so far and a summary of your portfolio (and of linked bank balances and spending, if you have connected a bank) are sent to our AI provider, OpenAI, to generate a reply.</li>
+            <li><strong>Questions you ask the assistant.</strong> When the AI assistant is on, your message, the conversation so far and a summary of your portfolio (and of linked bank balances and spending, if you have connected a bank) are sent to our AI provider, Google (Gemini), to generate a reply. While Equidy uses Gemini's free tier, Google may use this content to improve its products and human reviewers may read it, so avoid including details you consider private.</li>
             <li><strong>Technical data.</strong> Our hosting provider keeps standard server logs, such as IP address, browser type and the time of each request, for security and reliability.</li>
           </ul>
 
@@ -42,8 +42,8 @@ export function PrivacyPage() {
           <h2>Who we share it with</h2>
           <ul>
             <li><strong>Vercel</strong>, which hosts the service.</li>
-            <li><strong>Supabase</strong>, which provides sign-in and hosts the database where your account and saved data are stored.</li>
-            <li><strong>OpenAI</strong>, which provides the AI assistant, for the messages described above.</li>
+            <li><strong>Neon</strong>, which hosts the database where your account and saved data are stored.</li>
+            <li><strong>Google</strong>, which provides the AI assistant (Gemini), for the messages described above.</li>
             <li><strong>Plaid</strong>, only if you choose to connect a bank or brokerage account.</li>
             <li><strong>Alpha Vantage and Finnhub</strong>, which supply market data. We request prices and news by ticker symbol only; no personal information is sent to them.</li>
             <li><strong>Google, Microsoft or Apple</strong>, only if you choose to sign in with them.</li>

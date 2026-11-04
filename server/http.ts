@@ -1,4 +1,4 @@
-// Shared JSON-over-HTTP helper for third-party APIs (Supabase, Alpha Vantage, Finnhub, Plaid).
+// Shared JSON-over-HTTP helper for third-party APIs (Alpha Vantage, Finnhub, Plaid).
 
 export class UpstreamError extends Error {
   constructor(

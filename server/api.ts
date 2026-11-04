@@ -6,7 +6,7 @@ import { createLinkToken, exchangePublicToken, getAccounts, getHoldings, getTran
 import { DataError, loadUserData, parseUserData, saveUserData, syncEnabled } from "./userdata.js";
 import { rateLimit, AccountError } from "./accounts.js";
 
-// REST routes for market data (Alpha Vantage/Finnhub), intelligence (Finnhub), cloud sync (Supabase)
+// REST routes for market data (Alpha Vantage/Finnhub), intelligence (Finnhub), cloud sync (Postgres)
 // and bank connections (Plaid).
 
 export function servicesStatus() {

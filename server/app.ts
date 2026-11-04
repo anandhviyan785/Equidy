@@ -1,12 +1,12 @@
 import express from "express";
 import { authRouter, requireAuth } from "./auth.js";
-import { createResponse, describeError, hasOpenAIKey, streamResponse } from "./openai.js";
+import { describeError, generate, hasGeminiKey, streamGenerate } from "./gemini.js";
 import { apiRouter, servicesStatus } from "./api.js";
 import { getCompanyIntel, getMarketNews, intelToText } from "./finnhub.js";
 import { isSymbol } from "./market.js";
 
-export const MODEL = process.env.EQUIDY_MODEL ?? "gpt-6.1-sol";
-export const hasKey = hasOpenAIKey();
+export const MODEL = process.env.EQUIDY_MODEL ?? "gemini-3.6-flash";
+export const hasKey = hasGeminiKey();
 
 const SYSTEM = `You are Equidy, a financial intelligence assistant inside an investment analytics platform.
 
@@ -44,7 +44,7 @@ type Incoming = { role: "user" | "assistant"; content: string };
 
 // Short summary title for a conversation, shown in the sidebar.
 app.post("/api/title", requireAuth, async (req, res) => {
-  if (!hasKey) return void res.status(503).json({ error: "OpenAI is not configured on this server." });
+  if (!hasKey) return void res.status(503).json({ error: "Gemini is not configured on this server." });
   const { messages } = req.body as { messages?: Incoming[] };
   const transcript = (messages ?? [])
     .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
@@ -53,10 +53,10 @@ app.post("/api/title", requireAuth, async (req, res) => {
     .join("\n\n");
   if (!transcript) return void res.status(400).json({ error: "No messages to summarise." });
   try {
-    const { text, finish } = await createResponse({
+    const { text, finish } = await generate({
       model: MODEL,
       maxOutputTokens: 2000,
-      effort: "low",
+      thinking: "low",
       instructions:
         "You name chat conversations for a sidebar. Reply with only a title of 2 to 6 words that summarises what the conversation is about, in Title Case (capitalise every word). No quotes, no emoji, no trailing punctuation. If it is only greetings or small talk, reply: Casual Chat.",
       input: [{ role: "user", content: `Conversation:\n\n${transcript}\n\nTitle:` }],
@@ -72,7 +72,7 @@ app.post("/api/title", requireAuth, async (req, res) => {
 
 app.post("/api/chat", requireAuth, async (req, res) => {
   if (!hasKey) {
-    res.status(503).json({ error: "OpenAI is not configured on this server." });
+    res.status(503).json({ error: "Gemini is not configured on this server." });
     return;
   }
   const { messages, context, symbols } = req.body as { messages?: Incoming[]; context?: string; symbols?: unknown };
@@ -98,11 +98,10 @@ app.post("/api/chat", requireAuth, async (req, res) => {
   res.on("close", () => abort.abort());
 
   try {
-    const finish = await streamResponse(
+    const finish = await streamGenerate(
       {
         model: MODEL,
         maxOutputTokens: 16000,
-        effort: "medium",
         instructions: `${SYSTEM}\n\nPLATFORM CONTEXT\n${String(context ?? "").slice(0, 30_000)}${intel}`,
         input: clean,
         signal: abort.signal,

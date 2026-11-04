@@ -37,7 +37,7 @@ function signIn(user: AuthUser) {
   s.set({ profile: { ...s.profile, name: user.name, email: user.email ?? s.profile.email } });
 }
 
-async function post(path: string, body: object): Promise<{ user?: AuthUser; pending?: boolean; message?: string }> {
+async function post(path: string, body: object): Promise<AuthUser> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -49,22 +49,17 @@ async function post(path: string, body: object): Promise<{ user?: AuthUser; pend
   } catch {
     throw new Error("Couldn't reach Equidy. Check your connection and try again.");
   }
-  const j = (await res.json().catch(() => ({}))) as { user?: AuthUser; pending?: boolean; message?: string; error?: string };
-  if (!res.ok || (!j.user && !j.pending)) throw new Error(j.error || "Sign-in failed. Please try again.");
-  return j;
+  const j = (await res.json().catch(() => ({}))) as { user?: AuthUser; error?: string };
+  if (!res.ok || !j.user) throw new Error(j.error || "Sign-in failed. Please try again.");
+  return j.user;
 }
 
-/** Creates an account and signs in. Returns a message instead when the email must be confirmed first. */
-export async function signUpWithEmail(name: string, email: string, password: string): Promise<string | null> {
-  const r = await post("/api/auth/signup", { name, email, password });
-  if (r.pending || !r.user) return r.message ?? "Check your email to confirm your account, then sign in.";
-  signIn(r.user);
-  return null;
+export async function signUpWithEmail(name: string, email: string, password: string) {
+  signIn(await post("/api/auth/signup", { name, email, password }));
 }
 
 export async function signInWithEmail(email: string, password: string) {
-  const r = await post("/api/auth/signin", { email, password });
-  if (r.user) signIn(r.user);
+  signIn(await post("/api/auth/signin", { email, password }));
 }
 
 /** Starts the real OAuth redirect. */

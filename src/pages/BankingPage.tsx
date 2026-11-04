@@ -79,7 +79,7 @@ export function BankingPage() {
     return (
       <Page>
         <PageHeader title="Banking" subtitle="Connect bank and brokerage accounts with Plaid." />
-        <Empty icon={<Landmark className="h-6 w-6" />} title="Bank connections aren't set up yet" body="This server needs Plaid and Supabase keys before accounts can be linked." />
+        <Empty icon={<Landmark className="h-6 w-6" />} title="Bank connections aren't set up yet" body="This server needs Plaid keys and a database before accounts can be linked." />
       </Page>
     );
   }

@@ -1,19 +1,18 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import crypto from "node:crypto";
 import { Apple, Google, MicrosoftEntraId, OAuth2RequestError, decodeIdToken, generateCodeVerifier, generateState } from "arctic";
-import { AccountError, accountErrorFrom, accountsEnabled, createAccount, deleteAccount, rateLimit, verifyAccount } from "./accounts.js";
+import { AccountError, accountsEnabled, createAccount, deleteAccount, rateLimit, verifyAccount } from "./accounts.js";
 import { appUrl, getEnv } from "./env.js";
-import { authorizeUrl, describeUser, enabledOAuthProviders, exchangeCode, supabaseAuthEnabled } from "./supabase.js";
 import { deleteUserData } from "./userdata.js";
 import { removeAllItems } from "./plaid.js";
 
-// Sign-in. With Supabase configured, email/password and Google/Microsoft/Apple all go through Supabase Auth.
-// Without it, Google/Microsoft/Apple can still be used directly (arctic) when their credentials are set.
+// Sign-in: email + password accounts (stored in Postgres, see accounts.ts) and OAuth with
+// Google, Microsoft (Entra ID) and Apple. Each OAuth provider is enabled when its credentials are set.
 
 export type ProviderId = "google" | "microsoft" | "apple";
 
 export interface SessionUser {
-  id: string; // "sb:<supabase uuid>" or "<provider>:<subject>"
+  id: string; // "email:<id>" or "<provider>:<subject>"
   provider: ProviderId | "email";
   name: string;
   email: string | null;
@@ -28,14 +27,12 @@ const SECRET = getEnv("SESSION_SECRET") || crypto.randomBytes(32).toString("hex"
 if (!getEnv("SESSION_SECRET")) console.warn("[equidy] SESSION_SECRET not set — sessions will reset when the server restarts.");
 
 const callback = (p: ProviderId) => `${APP_URL}/api/auth/${p}/callback`;
-const SUPABASE_CALLBACK = `${APP_URL}/api/auth/supabase/callback`;
 
 function pemToPkcs8(pem: string): Uint8Array {
   const b64 = pem.replace(/\\n/g, "\n").replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
   return new Uint8Array(Buffer.from(b64, "base64"));
 }
 
-// Direct OAuth clients, used only when Supabase Auth isn't configured.
 const env = (k: string) => getEnv(k);
 const google = env("GOOGLE_CLIENT_ID") && env("GOOGLE_CLIENT_SECRET") ? new Google(env("GOOGLE_CLIENT_ID")!, env("GOOGLE_CLIENT_SECRET")!, callback("google")) : null;
 const microsoft =
@@ -49,7 +46,7 @@ const apple =
 const directProviders: Record<ProviderId, boolean> = { google: !!google, microsoft: !!microsoft, apple: !!apple };
 
 export async function getProviders(): Promise<Record<ProviderId, boolean>> {
-  return supabaseAuthEnabled() ? enabledOAuthProviders() : directProviders;
+  return directProviders;
 }
 
 export const authEnabled = () => accountsEnabled() || Object.values(directProviders).some(Boolean);
@@ -138,44 +135,25 @@ function startSession(res: Response, user: SessionUser) {
   setCookie(res, SESSION_COOKIE, encodeSession(user), { maxAge: SESSION_DAYS * 86_400 });
 }
 
-const sbUser = (id: string, name: string, email: string | null, provider: SessionUser["provider"], avatar: string | null = null): SessionUser => ({
-  id: `sb:${id}`,
-  provider,
-  name,
-  email,
-  avatar,
-});
-
-authRouter.post("/signup", express.json(), async (req, res) => {
-  try {
-    rateLimit(`signup:${req.ip}`);
-    const { account, pending } = await createAccount((req.body ?? {}) as { name?: string; email?: string; password?: string });
-    if (pending || !account) {
-      return void res.status(202).json({ pending: true, message: "Check your email and tap the confirmation link, then sign in." });
+function accountRoute(action: "signup" | "signin") {
+  return async (req: Request, res: Response) => {
+    try {
+      rateLimit(`${action}:${req.ip}`);
+      const body = (req.body ?? {}) as { name?: string; email?: string; password?: string };
+      const acct = action === "signup" ? await createAccount(body) : await verifyAccount(body);
+      const user: SessionUser = { id: `email:${acct.id}`, provider: "email", name: acct.name, email: acct.email, avatar: null };
+      startSession(res, user);
+      res.json({ user });
+    } catch (err) {
+      if (err instanceof AccountError) return void res.status(err.status).json({ error: err.message });
+      console.error(`[equidy] ${action} failed:`, err);
+      res.status(500).json({ error: "Something went wrong on our side. Please try again." });
     }
-    const user = sbUser(account.id, account.name, account.email, "email");
-    startSession(res, user);
-    res.json({ user });
-  } catch (err) {
-    const e = accountErrorFrom(err);
-    if (e.status >= 500) console.error("[equidy] signup failed:", err);
-    res.status(e.status).json({ error: e.message });
-  }
-});
+  };
+}
 
-authRouter.post("/signin", express.json(), async (req, res) => {
-  try {
-    rateLimit(`signin:${req.ip}`);
-    const account = await verifyAccount((req.body ?? {}) as { email?: string; password?: string });
-    const user = sbUser(account.id, account.name, account.email, "email");
-    startSession(res, user);
-    res.json({ user });
-  } catch (err) {
-    const e = accountErrorFrom(err);
-    if (e.status >= 500) console.error("[equidy] signin failed:", err);
-    res.status(e.status).json({ error: e.message });
-  }
-});
+authRouter.post("/signup", express.json(), accountRoute("signup"));
+authRouter.post("/signin", express.json(), accountRoute("signin"));
 
 // Account deletion (required by the App Store and Google Play for apps with sign-up).
 authRouter.post("/delete", async (req, res) => {
@@ -184,7 +162,7 @@ authRouter.post("/delete", async (req, res) => {
   try {
     await removeAllItems(user.id).catch((e) => console.error("[equidy] couldn't unlink banks during deletion:", e));
     await deleteUserData(user.id);
-    if (user.id.startsWith("sb:")) await deleteAccount(user.id.slice(3));
+    if (user.provider === "email") await deleteAccount(user.id.replace(/^email:/, ""));
     setCookie(res, SESSION_COOKIE, "", { maxAge: 0 });
     res.json({ ok: true });
   } catch (err) {
@@ -194,42 +172,10 @@ authRouter.post("/delete", async (req, res) => {
   }
 });
 
-// ---------------- OAuth through Supabase (PKCE) ----------------
+// ---------------- OAuth ----------------
 
-const VERIFIER_COOKIE = "sb_pkce_verifier";
-
-function startSupabaseOAuth(p: ProviderId, res: Response) {
-  const verifier = crypto.randomBytes(32).toString("base64url");
-  const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
-  setCookie(res, VERIFIER_COOKIE, verifier, { maxAge: 600 });
-  res.redirect(authorizeUrl(p, SUPABASE_CALLBACK, challenge));
-}
-
-authRouter.get("/supabase/callback", async (req, res) => {
-  const verifier = parseCookies(req)[VERIFIER_COOKIE];
-  setCookie(res, VERIFIER_COOKIE, "", { maxAge: 0 });
-  const q = req.query as Record<string, string | undefined>;
-  if (q.error) return fail(res, q.error === "access_denied" ? "Sign-in was cancelled." : "The provider declined the sign-in.");
-  if (!q.code || !verifier) return fail(res, "Your sign-in session expired. Please try again.");
-  try {
-    const u = await exchangeCode(q.code, verifier);
-    const d = describeUser(u);
-    startSession(res, sbUser(u.id, d.name, d.email, d.provider, d.avatar));
-    res.redirect(`${APP_URL}/`);
-  } catch (err) {
-    console.error("[equidy] Supabase sign-in failed:", err);
-    fail(res, "We couldn't complete sign-in. Please try again.");
-  }
-});
-
-// ---------------- direct OAuth (no Supabase) ----------------
-
-authRouter.get("/:provider/start", async (req, res) => {
+authRouter.get("/:provider/start", (req, res) => {
   const p = req.params.provider as ProviderId;
-  if (supabaseAuthEnabled()) {
-    if (!(p in directProviders) || !(await getProviders())[p]) return fail(res, "That sign-in method isn't available.");
-    return startSupabaseOAuth(p, res);
-  }
   const state = generateState();
   const verifier = generateCodeVerifier();
   let url: URL;

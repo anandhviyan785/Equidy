@@ -5,7 +5,7 @@ import { requestJson, UpstreamError } from "./http.js";
 // Market data, designed to run on the providers' free plans. Alpha Vantage provides daily price history
 // (and quotes); Finnhub provides real-time US stock quotes.
 // Alpha Vantage's free tier allows 25 requests a day and has no batch quotes, so by default:
-//   • history  → Alpha Vantage (cached 24h, shared through Supabase)
+//   • history  → Alpha Vantage (cached 24h, shared through the database)
 //   • quotes   → Finnhub when FINNHUB_API_KEY is set, otherwise Alpha Vantage; each falls back to the other,
 //                and finally to the last two daily closes already in the history cache.
 // With ALPHAVANTAGE_PREMIUM=true, Alpha Vantage is used first for quotes and returns full (20+ year) history.

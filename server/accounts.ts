@@ -1,16 +1,45 @@
-import { UpstreamError } from "./http.js";
-import { appUrl } from "./env.js";
-import { deleteAuthUser, describeUser, signInWithPassword, signUp, supabaseAuthEnabled, supabaseDbEnabled, type SupabaseUser } from "./supabase.js";
+import crypto from "node:crypto";
+import { promisify } from "node:util";
+import { db, dbEnabled } from "./db.js";
 
-// Email + password accounts, stored and verified by Supabase Auth.
-// Enabled when SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_PUBLISHABLE_KEY) are set.
+// Email + password accounts stored in Postgres (e.g. Neon, added from Vercel → Storage).
+// Enabled when DATABASE_URL (or POSTGRES_URL, set by Vercel's Postgres integrations) is present.
 
-export const accountsEnabled = () => supabaseAuthEnabled();
+export const accountsEnabled = () => dbEnabled();
+
+const scrypt = promisify(crypto.scrypt) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 
 export interface Account {
   id: string;
   email: string;
   name: string;
+}
+
+let ready: Promise<void> | null = null;
+function ensureTable() {
+  ready ??= db()`
+    CREATE TABLE IF NOT EXISTS equidy_users (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`.then(() => undefined).catch((e) => { ready = null; throw e; });
+  return ready;
+}
+
+async function hashPassword(password: string) {
+  const salt = crypto.randomBytes(16);
+  const key = await scrypt(password, salt, 64);
+  return `scrypt:${salt.toString("base64")}:${key.toString("base64")}`;
+}
+
+async function verifyPassword(password: string, stored: string) {
+  const [, saltB64, keyB64] = stored.split(":");
+  if (!saltB64 || !keyB64) return false;
+  const expected = Buffer.from(keyB64, "base64");
+  const actual = await scrypt(password, Buffer.from(saltB64, "base64"), expected.length);
+  return crypto.timingSafeEqual(actual, expected);
 }
 
 export class AccountError extends Error {
@@ -32,55 +61,33 @@ export function validate(input: { name?: string; email?: string; password?: stri
   return { email, password, name };
 }
 
-/** Turns Supabase Auth errors into messages that are safe to show to the person signing in. */
-export function accountErrorFrom(err: unknown): AccountError {
-  if (err instanceof AccountError) return err;
-  if (!(err instanceof UpstreamError)) return new AccountError("Something went wrong on our side. Please try again.", 500);
-  const code = err.code ?? "";
-  const msg = err.message.toLowerCase();
-  if (code === "not_configured") return new AccountError("Accounts aren't set up on this server yet.", 503);
-  if (code === "user_already_exists" || code === "email_exists" || msg.includes("already registered")) return new AccountError("An account with this email already exists. Sign in instead.", 409);
-  if (code === "invalid_credentials" || code === "invalid_grant" || msg.includes("invalid login credentials")) return new AccountError("Incorrect email or password.", 401);
-  if (code === "email_not_confirmed" || msg.includes("email not confirmed")) return new AccountError("Confirm your email first — check your inbox for the link we sent.", 403);
-  if (code === "weak_password" || msg.includes("password should")) return new AccountError("Choose a stronger password (at least 8 characters, mixing letters and numbers).");
-  if (code === "email_address_invalid") return new AccountError("Enter a valid email address.");
-  if (code === "signup_disabled") return new AccountError("New sign-ups are switched off at the moment.", 403);
-  if (err.status === 429 || code.includes("rate_limit")) return new AccountError("Too many attempts. Please wait a few minutes and try again.", 429);
-  return new AccountError("Something went wrong on our side. Please try again.", 502);
-}
-
-const toAccount = (u: SupabaseUser, fallbackName: string): Account => {
-  const d = describeUser(u);
-  return { id: u.id, email: d.email ?? "", name: d.name || fallbackName };
-};
-
-/** Creates an account. Returns `pending` when Supabase requires the email to be confirmed first. */
-export async function createAccount(input: { name?: string; email?: string; password?: string }): Promise<{ account: Account | null; pending: boolean }> {
-  if (!accountsEnabled()) throw new AccountError("Accounts aren't set up on this server yet.", 503);
+export async function createAccount(input: { name?: string; email?: string; password?: string }): Promise<Account> {
+  if (!dbEnabled()) throw new AccountError("Accounts aren't set up on this server yet.", 503);
   const { email, password, name } = validate(input, true);
-  try {
-    const { user, confirmed } = await signUp(email, password, name, `${appUrl()}/login?confirmed=1`);
-    if (!confirmed || !user) return { account: null, pending: true };
-    return { account: toAccount(user, name), pending: false };
-  } catch (err) {
-    throw accountErrorFrom(err);
-  }
+  await ensureTable();
+  const sql = db();
+  const id = crypto.randomUUID();
+  const hash = await hashPassword(password);
+  const rows = (await sql`
+    INSERT INTO equidy_users (id, email, name, password_hash) VALUES (${id}, ${email}, ${name}, ${hash})
+    ON CONFLICT (email) DO NOTHING
+    RETURNING id, email, name`) as Account[];
+  if (!rows.length) throw new AccountError("An account with this email already exists. Sign in instead.", 409);
+  return rows[0];
 }
+
+// Used when the email is unknown, so the response takes as long as a real check.
+const DUMMY_HASH = `scrypt:${Buffer.alloc(16).toString("base64")}:${Buffer.alloc(64).toString("base64")}`;
 
 export async function verifyAccount(input: { email?: string; password?: string }): Promise<Account> {
-  if (!accountsEnabled()) throw new AccountError("Accounts aren't set up on this server yet.", 503);
+  if (!dbEnabled()) throw new AccountError("Accounts aren't set up on this server yet.", 503);
   const { email, password } = validate(input, false);
-  try {
-    return toAccount(await signInWithPassword(email, password), email.split("@")[0]);
-  } catch (err) {
-    throw accountErrorFrom(err);
-  }
-}
-
-/** Permanently removes a Supabase user (needs the service-role key). */
-export async function deleteAccount(id: string) {
-  if (!supabaseDbEnabled()) throw new AccountError("Account deletion needs SUPABASE_SERVICE_ROLE_KEY on the server.", 503);
-  await deleteAuthUser(id);
+  await ensureTable();
+  const sql = db();
+  const rows = (await sql`SELECT id, email, name, password_hash FROM equidy_users WHERE email = ${email}`) as (Account & { password_hash: string })[];
+  const ok = await verifyPassword(password, rows[0]?.password_hash ?? DUMMY_HASH);
+  if (!rows.length || !ok) throw new AccountError("Incorrect email or password.", 401);
+  return { id: rows[0].id, email: rows[0].email, name: rows[0].name };
 }
 
 // Best-effort brute-force protection (per server instance).
@@ -93,4 +100,11 @@ export function rateLimit(key: string, max = 10, windowMs = 10 * 60_000) {
     return;
   }
   if (++a.n > max) throw new AccountError("Too many attempts. Please wait a few minutes and try again.", 429);
+}
+
+/** Permanently removes an email account. */
+export async function deleteAccount(id: string) {
+  if (!dbEnabled()) return;
+  await ensureTable();
+  await db()`DELETE FROM equidy_users WHERE id = ${id}`;
 }

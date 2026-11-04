@@ -5,7 +5,7 @@ import { money, pct, price } from "./format";
 import { liveDays } from "./market";
 import { bankingContext } from "./banking";
 
-/** A snapshot of the user's financial state, shared by the OpenAI backend and the offline engine. */
+/** A snapshot of the user's financial state, shared by the Gemini backend and the offline engine. */
 export function buildSnapshot() {
   const { holdings, watchlist } = usePortfolio.getState();
   const { prices, sources } = useMarket.getState();

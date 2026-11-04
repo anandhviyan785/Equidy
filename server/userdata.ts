@@ -1,9 +1,8 @@
-import { dbDelete, dbSelect, dbUpsert, supabaseDbEnabled } from "./supabase.js";
+import { db, dbEnabled, ensureSchema } from "./db.js";
 
-// Per-user app data (portfolio, watchlist, conversations, settings) kept in Supabase so it follows
+// Per-user app data (portfolio, watchlist, conversations, settings) kept in Postgres so it follows
 // the person across devices. Stored as JSON documents in the equidy_user_data table.
 
-const TABLE = "equidy_user_data";
 export const MAX_DATA_BYTES = 3_500_000; // below Vercel's 4.5 MB request limit
 const MAX_CONVERSATIONS = 300;
 
@@ -14,7 +13,7 @@ export interface UserData {
   updatedAt: number;
 }
 
-export const syncEnabled = () => supabaseDbEnabled();
+export const syncEnabled = () => dbEnabled();
 
 export class DataError extends Error {
   constructor(message: string, readonly status = 400) {
@@ -39,28 +38,30 @@ export function parseUserData(input: unknown): UserData {
 }
 
 interface Row {
-  user_id: string;
   portfolio: UserData["portfolio"];
   chats: unknown[];
   settings: Record<string, unknown>;
-  client_updated_at: number;
+  client_updated_at: number | string; // BIGINT arrives as a string
 }
 
 export async function loadUserData(userId: string): Promise<UserData | null> {
-  const [row] = await dbSelect<Row>(TABLE, { user_id: userId });
+  await ensureSchema();
+  const [row] = (await db()`SELECT portfolio, chats, settings, client_updated_at FROM equidy_user_data WHERE user_id = ${userId}`) as Row[];
   if (!row) return null;
   return { portfolio: row.portfolio, chats: row.chats, settings: row.settings, updatedAt: Number(row.client_updated_at) || 0 };
 }
 
 export async function saveUserData(userId: string, data: UserData): Promise<void> {
-  await dbUpsert(
-    TABLE,
-    { user_id: userId, portfolio: data.portfolio, chats: data.chats, settings: data.settings, client_updated_at: data.updatedAt, updated_at: new Date().toISOString() },
-    "user_id",
-  );
+  await ensureSchema();
+  await db()`
+    INSERT INTO equidy_user_data (user_id, portfolio, chats, settings, client_updated_at, updated_at)
+    VALUES (${userId}, ${JSON.stringify(data.portfolio)}::jsonb, ${JSON.stringify(data.chats)}::jsonb, ${JSON.stringify(data.settings)}::jsonb, ${Math.round(data.updatedAt)}, now())
+    ON CONFLICT (user_id) DO UPDATE SET portfolio = EXCLUDED.portfolio, chats = EXCLUDED.chats, settings = EXCLUDED.settings,
+      client_updated_at = EXCLUDED.client_updated_at, updated_at = now()`;
 }
 
 export async function deleteUserData(userId: string): Promise<void> {
   if (!syncEnabled()) return;
-  await dbDelete(TABLE, { user_id: userId });
+  await ensureSchema();
+  await db()`DELETE FROM equidy_user_data WHERE user_id = ${userId}`;
 }

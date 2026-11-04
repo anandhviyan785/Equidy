@@ -14,13 +14,9 @@ services:
         generateValue: true
       - key: APP_URL # your public URL, e.g. https://equidy.onrender.com or https://equidy.app
         sync: false
-      - key: OPENAI_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
+      - key: DATABASE_URL # Neon Postgres connection string
         sync: false
       - key: ALPHAVANTAGE_API_KEY
         sync: false

@@ -1,17 +1,16 @@
-import { dbSelect, dbUpsert, supabaseDbEnabled } from "./supabase.js";
+import { db, dbEnabled, ensureSchema } from "./db.js";
 
 // Two-level cache for third-party API responses: in-memory per server instance, plus (optionally)
-// the equidy_market_cache table in Supabase so serverless instances share results. This matters for
+// the equidy_market_cache table in Postgres so serverless instances share results. This matters for
 // Alpha Vantage, whose free tier allows only 25 requests a day.
 
-const TABLE = "equidy_market_cache";
 const memory = new Map<string, { at: number; value: unknown }>();
 const inflight = new Map<string, Promise<unknown>>();
 const MAX_MEMORY_ENTRIES = 2000;
 const NEGATIVE_TTL_MS = 5 * 60_000;
 
 interface Options {
-  /** Also store in Supabase so other server instances can reuse it. */
+  /** Also store in the database so other server instances can reuse it. */
   persist?: boolean;
 }
 
@@ -26,11 +25,12 @@ function remember(key: string, value: unknown, at = Date.now()) {
 }
 
 async function readPersisted<T>(key: string, ttlMs: number): Promise<T | undefined> {
-  if (!supabaseDbEnabled()) return undefined;
+  if (!dbEnabled()) return undefined;
   try {
-    const [row] = await dbSelect<{ payload: T; fetched_at: string }>(TABLE, { key }, "payload,fetched_at");
+    await ensureSchema();
+    const [row] = (await db()`SELECT payload, fetched_at FROM equidy_market_cache WHERE key = ${key}`) as { payload: T; fetched_at: string | Date }[];
     if (!row) return undefined;
-    const at = Date.parse(row.fetched_at);
+    const at = new Date(row.fetched_at).getTime();
     if (!(Date.now() - at < ttlMs)) return undefined;
     remember(key, row.payload, at);
     return row.payload;
@@ -41,9 +41,12 @@ async function readPersisted<T>(key: string, ttlMs: number): Promise<T | undefin
 }
 
 async function writePersisted(key: string, value: unknown) {
-  if (!supabaseDbEnabled()) return;
+  if (!dbEnabled()) return;
   try {
-    await dbUpsert(TABLE, { key, payload: value, fetched_at: new Date().toISOString() }, "key");
+    await ensureSchema();
+    await db()`
+      INSERT INTO equidy_market_cache (key, payload, fetched_at) VALUES (${key}, ${JSON.stringify(value)}::jsonb, now())
+      ON CONFLICT (key) DO UPDATE SET payload = EXCLUDED.payload, fetched_at = now()`;
   } catch (err) {
     console.error("[equidy] cache write failed:", (err as Error).message);
   }

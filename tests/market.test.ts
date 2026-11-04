@@ -9,7 +9,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   clearCache();
   resetMarketState();
-  delete process.env.SUPABASE_URL;
+  delete process.env.DATABASE_URL;
   delete process.env.ALPHAVANTAGE_PREMIUM;
   process.env.ALPHAVANTAGE_API_KEY = "av-test";
   process.env.FINNHUB_API_KEY = "fh-test";

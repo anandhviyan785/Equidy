@@ -1,13 +1,12 @@
 import { getEnv } from "./env.js";
 import { requestJson, UpstreamError } from "./http.js";
 import { decryptSecret, encryptionAvailable, encryptSecret, opaqueUserId } from "./secrets.js";
-import { dbDelete, dbSelect, dbUpsert, supabaseDbEnabled } from "./supabase.js";
+import { db, dbEnabled, ensureSchema } from "./db.js";
 
-// Bank connections through Plaid. Access tokens are encrypted (AES-256-GCM) and stored in Supabase
+// Bank connections through Plaid. Access tokens are encrypted (AES-256-GCM) and stored in Postgres
 // (equidy_plaid_items); they never reach the browser. Needs PLAID_CLIENT_ID, PLAID_SECRET,
-// the Supabase service key and SESSION_SECRET (or TOKEN_ENCRYPTION_KEY).
+// DATABASE_URL and SESSION_SECRET (or TOKEN_ENCRYPTION_KEY).
 
-const TABLE = "equidy_plaid_items";
 const MAX_ITEMS_PER_USER = 10;
 
 const plaidEnv = () => {
@@ -20,7 +19,7 @@ const list = (name: string, fallback: string) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-export const plaidEnabled = () => !!(getEnv("PLAID_CLIENT_ID") && getEnv("PLAID_SECRET") && supabaseDbEnabled() && encryptionAvailable());
+export const plaidEnabled = () => !!(getEnv("PLAID_CLIENT_ID") && getEnv("PLAID_SECRET") && dbEnabled() && encryptionAvailable());
 export const plaidStatus = () => ({ enabled: plaidEnabled(), environment: plaidEnv() });
 
 export class PlaidError extends Error {
@@ -75,20 +74,23 @@ export async function createLinkToken(userId: string): Promise<{ linkToken: stri
 
 export async function exchangePublicToken(userId: string, publicToken: string, institutionName: string | null): Promise<{ itemId: string }> {
   if (!plaidEnabled()) throw new PlaidError("Bank connections aren't set up on this server.", 503);
-  const existing = await dbSelect<ItemRow>(TABLE, { user_id: userId }, "item_id");
+  await ensureSchema();
+  const existing = (await db()`SELECT item_id FROM equidy_plaid_items WHERE user_id = ${userId}`) as Pick<ItemRow, "item_id">[];
   if (existing.length >= MAX_ITEMS_PER_USER) throw new PlaidError(`You can connect up to ${MAX_ITEMS_PER_USER} banks.`, 400);
   const res = await plaid<{ access_token: string; item_id: string }>("/item/public_token/exchange", { public_token: publicToken });
-  await dbUpsert(
-    TABLE,
-    { item_id: res.item_id, user_id: userId, access_token_enc: encryptSecret(res.access_token), institution_name: institutionName?.slice(0, 120) ?? null },
-    "item_id",
-  );
+  const institution = institutionName?.slice(0, 120) ?? null;
+  await db()`
+    INSERT INTO equidy_plaid_items (item_id, user_id, access_token_enc, institution_name)
+    VALUES (${res.item_id}, ${userId}, ${encryptSecret(res.access_token)}, ${institution})
+    ON CONFLICT (item_id) DO UPDATE SET access_token_enc = EXCLUDED.access_token_enc, institution_name = EXCLUDED.institution_name
+    WHERE equidy_plaid_items.user_id = EXCLUDED.user_id`;
   return { itemId: res.item_id };
 }
 
 async function items(userId: string): Promise<{ itemId: string; institution: string | null; token: string }[]> {
   if (!plaidEnabled()) return [];
-  const rows = await dbSelect<ItemRow>(TABLE, { user_id: userId });
+  await ensureSchema();
+  const rows = (await db()`SELECT item_id, user_id, access_token_enc, institution_name FROM equidy_plaid_items WHERE user_id = ${userId}`) as ItemRow[];
   return rows.map((r) => ({ itemId: r.item_id, institution: r.institution_name, token: decryptSecret(r.access_token_enc) }));
 }
 
@@ -96,7 +98,7 @@ export async function removeItem(userId: string, itemId: string): Promise<void> 
   const item = (await items(userId)).find((i) => i.itemId === itemId);
   if (!item) throw new PlaidError("That bank connection wasn't found.", 404);
   await plaid("/item/remove", { access_token: item.token }).catch((e) => console.warn("[equidy] Plaid item/remove:", (e as Error).message));
-  await dbDelete(TABLE, { item_id: itemId, user_id: userId });
+  await db()`DELETE FROM equidy_plaid_items WHERE item_id = ${itemId} AND user_id = ${userId}`;
 }
 
 export async function removeAllItems(userId: string): Promise<void> {

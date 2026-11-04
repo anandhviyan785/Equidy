@@ -8,14 +8,14 @@ export interface Services {
   history: boolean; // Alpha Vantage daily history
   historyFull: boolean; // full history (Alpha Vantage premium) rather than the last ~100 days
   intel: boolean; // Finnhub intelligence
-  sync: boolean; // Supabase cloud sync
+  sync: boolean; // cloud sync (Postgres)
   banking: boolean; // Plaid
   bankingEnv: "sandbox" | "production";
 }
 
 export interface AIStatus {
   online: boolean; // backend reachable
-  ai: boolean; // OpenAI configured
+  ai: boolean; // Gemini configured
   model?: string;
   services?: Services;
 }
@@ -38,8 +38,8 @@ export interface StreamArgs {
   signal?: AbortSignal;
 }
 
-/** Streams an answer from OpenAI via the backend, or from the offline engine if OpenAI is unavailable. */
-export async function streamChat({ history, onDelta, signal }: StreamArgs): Promise<"openai" | "offline"> {
+/** Streams an answer from Gemini via the backend, or from the offline engine if Gemini is unavailable. */
+export async function streamChat({ history, onDelta, signal }: StreamArgs): Promise<"gemini" | "offline"> {
   const snap = buildSnapshot();
   const last = history[history.length - 1]?.content ?? "";
   const status = await aiStatus();
@@ -58,7 +58,7 @@ export async function streamChat({ history, onDelta, signal }: StreamArgs): Prom
     });
     if (res?.ok && res.body) {
       await readSSE(res.body, onDelta, signal);
-      return "openai";
+      return "gemini";
     }
     if (res && res.status !== 503) {
       const msg = await res.text().catch(() => "");
@@ -104,7 +104,7 @@ function safeError(raw: string) {
   }
 }
 
-/** Asks OpenAI (through the server) for a summary title; null when OpenAI isn't available. */
+/** Asks Gemini (through the server) for a summary title; null when Gemini isn't available. */
 export async function aiTitle(messages: { role: "user" | "assistant"; content: string }[]): Promise<string | null> {
   const status = await aiStatus();
   if (!status.ai) return null;

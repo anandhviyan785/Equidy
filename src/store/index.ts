@@ -105,7 +105,7 @@ export interface ChatMessage {
   content: string;
   createdAt: number;
   error?: boolean;
-  source?: "openai" | "claude" | "offline"; // "claude" kept for chats saved before the switch to OpenAI
+  source?: "gemini" | "openai" | "claude" | "offline"; // "openai"/"claude" kept for chats saved with earlier AI providers
 }
 
 export interface Conversation {

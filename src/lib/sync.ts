@@ -4,7 +4,7 @@ import type { Holding } from "@/lib/finance";
 import { api } from "./api";
 import { services } from "./live";
 
-// Cloud sync through Supabase: the signed-in user's portfolio, watchlist, conversations and settings
+// Cloud sync through the Equidy server (Postgres): the signed-in user's portfolio, watchlist, conversations and settings
 // are saved on the server and restored on any device. Last writer wins, compared by modification time.
 
 const PUSH_DEBOUNCE_MS = 2500;
@@ -145,7 +145,7 @@ async function start(user: AuthUser, isCancelled: () => boolean): Promise<() => 
   };
 }
 
-/** Syncs the signed-in user's data with Supabase for as long as the component is mounted. */
+/** Syncs the signed-in user's data with the server for as long as the component is mounted. */
 export function useCloudSync(user: AuthUser | null) {
   const uid = user && !user.demo ? user.id : null;
   useEffect(() => {
