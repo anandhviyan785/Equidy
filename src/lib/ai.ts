@@ -9,8 +9,6 @@ export interface Services {
   historyFull: boolean; // full history (Alpha Vantage premium) rather than the last ~100 days
   intel: boolean; // Finnhub intelligence
   sync: boolean; // cloud sync (Postgres)
-  banking: boolean; // Plaid
-  bankingEnv: "sandbox" | "production";
 }
 
 export interface AIStatus {

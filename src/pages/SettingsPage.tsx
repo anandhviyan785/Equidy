@@ -88,7 +88,7 @@ export function SettingsPage() {
           </Row>
         </Section>
 
-        <Section title="Data sources" desc="Where prices, research and account data come from.">
+        <Section title="Data sources" desc="Where prices and research come from.">
           {sourceRows(status?.services).map(([label, value, hint]) => (
             <Row key={label} label={label} hint={hint}>
               <span className="chip">{value}</span>
@@ -132,6 +132,5 @@ function sourceRows(svc: Services | undefined): [string, string, string][] {
     ["Price history", svc.history ? (svc.historyFull ? "Alpha Vantage · full" : "Alpha Vantage · last 100 days") : "Simulated", svc.history && !svc.historyFull ? "Older points are simulated. An Alpha Vantage premium key unlocks full history." : ""],
     ["Market intelligence", svc.intel ? "Finnhub" : "Off", "Company profiles, analyst ratings, earnings and news."],
     ["Cloud sync", svc.sync ? "Your account (Neon Postgres)" : "This browser only", ""],
-    ["Bank connections", svc.banking ? `Plaid · ${svc.bankingEnv}` : "Off", ""],
   ];
 }

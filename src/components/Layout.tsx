@@ -8,8 +8,7 @@ import { useLiveTicks, useThemeSync } from "@/hooks";
 import { useAuth } from "@/store";
 import { loadAuth } from "@/lib/auth";
 import { retitleExisting } from "@/lib/chatRunner";
-import { services, useLiveMarket } from "@/lib/live";
-import { loadBanking, useBanking } from "@/lib/banking";
+import { useLiveMarket } from "@/lib/live";
 import { useCloudSync } from "@/lib/sync";
 
 function readCollapsed() {
@@ -28,14 +27,6 @@ export function Layout() {
   const checked = useAuth((s) => s.checked);
   useLiveMarket();
   useCloudSync(user);
-  // Linked bank balances feed the AI's context, so load them once per session in the background.
-  const uid = user && !user.demo ? user.id : null;
-  useEffect(() => {
-    if (!uid) return;
-    void services().then((svc) => {
-      if (svc?.banking && !useBanking.getState().loaded) void loadBanking();
-    });
-  }, [uid]);
   useEffect(() => { void loadAuth(); retitleExisting(); }, []);
 
   useEffect(() => {

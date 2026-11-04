@@ -35,14 +35,6 @@ export function ensureSchema(): Promise<void> {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
     await sql`
-      CREATE TABLE IF NOT EXISTS equidy_plaid_items (
-        item_id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        access_token_enc TEXT NOT NULL,
-        institution_name TEXT,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      )`;
-    await sql`
       CREATE TABLE IF NOT EXISTS equidy_market_cache (
         key TEXT PRIMARY KEY,
         payload JSONB NOT NULL,

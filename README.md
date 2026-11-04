@@ -22,15 +22,14 @@ Production: `npm run build && npm start` (Express serves `dist/` and the API on 
 
 ## Services
 
-Every integration is optional and switches on when its keys are set (see `.env.example`). Whatever isn't configured falls back: the offline AI engine, simulated prices, browser-only storage, no bank links. **Settings → Data sources** shows what's active.
+Every integration is optional and switches on when its keys are set (see `.env.example`). Whatever isn't configured falls back: the offline AI engine, simulated prices, browser-only storage. **Settings → Data sources** shows what's active.
 
 | Service | Used for | Keys |
 |---|---|---|
 | **Google Gemini** | The AI assistant (streamed; default model `gemini-3.6-flash`, free tier) | `GEMINI_API_KEY` |
-| **Neon Postgres** | The database: email/password accounts, cloud-synced portfolio, watchlist, chats and settings, encrypted bank links, shared market-data cache. Tables are created automatically | `DATABASE_URL` |
+| **Neon Postgres** | The database: email/password accounts, cloud-synced portfolio, watchlist, chats and settings, shared market-data cache. Tables are created automatically | `DATABASE_URL` |
 | **Alpha Vantage** | Daily price history behind charts and risk statistics, plus quotes | `ALPHAVANTAGE_API_KEY` (`ALPHAVANTAGE_PREMIUM=true` for a paid key) |
 | **Finnhub** | Financial intelligence: company profile, key metrics, analyst ratings, earnings surprises, peers, company and market news. Also real-time quotes. Fed to the AI as context | `FINNHUB_API_KEY` |
-| **Plaid** | Bank and brokerage connections: balances, 30-day transactions, investment holdings (importable into the portfolio). Summaries are shared with the AI | `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV` |
 
 ### Running on free plans
 
@@ -40,7 +39,6 @@ All of the data services work on free plans, and the defaults are tuned to stay 
 - **Neon Free**: 0.5 GB Postgres, which is plenty for accounts, synced data and caches. Idle databases suspend and wake automatically on the next request.
 - **Alpha Vantage Free**: 25 requests a day. History is cached for 24 hours and shared through the database (enough for about 20 symbols a day); quotes use Finnhub first.
 - **Finnhub Free**: 60 calls a minute. Every endpoint Equidy uses (quote, profile, metrics, recommendations, earnings, peers, company and market news) is on the free plan. Crypto quotes need a paid Finnhub plan, so BTC and ETH use Alpha Vantage's free daily data instead.
-- **Plaid**: sandbox (test banks) is free. For real accounts, Plaid's free Trial plan allows 10 connected banks for new US/Canada teams; more than that needs a paid plan.
 - Without a Gemini key Equidy uses its free offline engine. Vercel's free Hobby plan is for non-commercial use.
 
 ### Database setup (Neon)
@@ -50,10 +48,6 @@ On Vercel, open **Storage → Create Database → Neon**, pick the free plan and
 ### Market data and limits
 
 Alpha Vantage's free tier allows **25 requests a day** and has no batch quotes. Equidy therefore uses Alpha Vantage for daily history (cached 24 hours and shared through the database) and Finnhub, when configured, for real-time quotes, with each falling back to the other. Without Finnhub, quotes come from Alpha Vantage for held and watched symbols only, refreshed every 30 minutes. The free tier returns the last ~100 trading days; older points on 1Y/2Y charts and in risk statistics stay simulated and are labelled as such. Indices (S&P 500, Nasdaq 100 and so on) remain simulated.
-
-### Plaid setup
-
-Create keys at dashboard.plaid.com. Start with `PLAID_ENV=sandbox` and sign in to any test bank with `user_good` / `pass_good`. Production needs Plaid's approval. Plaid covers banks in the US, Canada, the UK and much of Europe (`PLAID_COUNTRY_CODES`). Banks that use their own sign-in page need `PLAID_REDIRECT_URI=<APP_URL>/banking`, registered in the Plaid dashboard. Access tokens are encrypted with AES-256-GCM using `SESSION_SECRET` (or `TOKEN_ENCRYPTION_KEY`) and never reach the browser. Bank linking needs `DATABASE_URL` and `SESSION_SECRET`.
 
 ## Sign in with Google, Microsoft or Apple (optional)
 
@@ -77,7 +71,7 @@ Apple needs HTTPS and a real domain. It does not accept `localhost` redirect URI
 
 1. Push this folder to a GitHub repository, with `package.json` at the top level.
 2. At vercel.com, sign up with GitHub, choose **Add New → Project**, and import the repository. The settings come from `vercel.json`, so change nothing.
-3. Under **Environment Variables**, add `SESSION_SECRET` (a long random string), then any of the service keys above: `GEMINI_API_KEY`, a Neon database from **Storage** (sets `DATABASE_URL`), `ALPHAVANTAGE_API_KEY`, `FINNHUB_API_KEY` and the Plaid keys.
+3. Under **Environment Variables**, add `SESSION_SECRET` (a long random string), then any of the service keys above: `GEMINI_API_KEY`, a Neon database from **Storage** (sets `DATABASE_URL`), `ALPHAVANTAGE_API_KEY` and `FINNHUB_API_KEY`.
 4. Click **Deploy**. Your site is at `https://<project>.vercel.app`. `APP_URL` is set automatically from Vercel's production domain.
 
 The frontend is served as static files, and `api/index.ts` runs the same Express app as a serverless function. `render.yaml` and the `Dockerfile` remain for Render or any container host.
@@ -91,7 +85,6 @@ The frontend is served as static files, and `api/index.ts` runs the same Express
 | **Statistics** | Annualised return, volatility, Sharpe, Sortino, beta, alpha, max drawdown, 1-day VaR(95%), diversification (1 − HHI). Drawdown curve, return histogram, monthly heatmap, correlation matrix, sector exposure, benchmark table. |
 | **Markets** | Index cards, interactive chart (1D–2Y), sector performance, gainers and decliners, filterable securities table, Finnhub market news. |
 | **Symbol pages** | Price chart (real Alpha Vantage history where available), key statistics, 5-year revenue and net income, Finnhub analyst ratings, metrics, earnings, peers and news, watch, add to portfolio, "Ask Equidy". |
-| **Banking** | Link banks and brokerages with Plaid: balances, credit owed, 30-day transactions, brokerage holdings with one-tap import into the portfolio, AI review of spending. |
 | **Watchlist** | Search to add, star toggles, sparklines, AI briefing. |
 | **Research** | Company screener, compound-growth calculator, finance lessons that open as chats. |
 | **Settings / Profile** | Dark, light or system theme; currency; live ticks; response style; risk profile; risk-free rate; export, reset and clear data. |
@@ -102,7 +95,7 @@ Keyboard: `Ctrl/⌘+B` toggles the sidebar, `Ctrl/⌘+Shift+O` starts a new chat
 
 ```
 server/app.ts          Express API: /api/health, /api/chat (SSE streaming from Google Gemini)
-server/api.ts          Routes: /api/market/*, /api/intel/*, /api/data (sync), /api/plaid/*
+server/api.ts          Routes: /api/market/*, /api/intel/*, /api/data (sync)
 server/gemini.ts       Fetch-based Gemini client (one-shot + SSE streaming)
 server/db.ts           Neon Postgres connection and table setup
 server/accounts.ts     Email/password accounts (scrypt hashes in Postgres)
@@ -110,7 +103,6 @@ server/auth.ts         Sign-in (email, Google, Microsoft, Apple), signed session
 server/userdata.ts     Cloud-synced portfolio, watchlist, chats and settings
 server/market.ts       Alpha Vantage history/quotes and Finnhub quotes, with fallbacks
 server/finnhub.ts      Finnhub intelligence (profile, metrics, ratings, earnings, peers, news)
-server/plaid.ts        Plaid Link tokens, encrypted item storage, accounts, transactions, holdings
 server/cache.ts        In-memory + Postgres cache shared across instances
 server/index.ts        Long-running server (local, Render, Docker): serves dist/ and the API
 api/index.ts           Vercel serverless entry (same Express app)
@@ -119,9 +111,8 @@ src/
   lib/market.ts        Price history: real Alpha Vantage bars where loaded, simulator elsewhere
   lib/live.ts          Live quotes/history refresh and Finnhub intelligence on the client
   lib/sync.ts          Cloud sync of the stores through the server
-  lib/banking.ts       Plaid Link and bank data on the client
   lib/finance.ts       Positions, risk metrics, correlation, compounding
-  lib/context.ts       Portfolio/market/bank snapshot shared with the AI (labels live vs simulated)
+  lib/context.ts       Portfolio/market snapshot shared with the AI (labels live vs simulated)
   lib/ai.ts            Client: Gemini via backend, automatic fallback to the offline engine
   lib/engine.ts        Offline analysis engine (intent routing → Markdown)
   lib/chatRunner.ts    Streaming lifecycle (abort, regenerate, survives navigation)

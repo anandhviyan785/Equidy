@@ -3,7 +3,6 @@ import { useMarket, usePortfolio, useSettings } from "@/store";
 import { allocationBy, benchmarkHistory, portfolioHistory, positions, riskMetrics, summarize } from "./finance";
 import { money, pct, price } from "./format";
 import { liveDays } from "./market";
-import { bankingContext } from "./banking";
 
 /** A snapshot of the user's financial state, shared by the Gemini backend and the offline engine. */
 export function buildSnapshot() {
@@ -51,8 +50,6 @@ export function snapshotToText(s: Snapshot): string {
   const covered = Object.values(BY_SYMBOL).filter((x) => x.financials).map((x) => x.symbol);
   lines.push(`\nReference fundamentals available in-app for: ${covered.join(", ")}.`);
   lines.push(dataSources(s));
-  const bank = bankingContext();
-  if (bank) lines.push(bank);
   return lines.join("\n");
 }
 

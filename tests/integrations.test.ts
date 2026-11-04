@@ -1,42 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { decryptSecret, encryptSecret, opaqueUserId } from "../server/secrets";
-import { mapAccount, mapHoldings, mapTransaction } from "../server/plaid";
 import { intelToText, parseMetrics, parseNews } from "../server/finnhub";
 import { parseUserData } from "../server/userdata";
 import { mergeHistory } from "../src/lib/market";
-
-process.env.SESSION_SECRET = "test-secret";
-
-describe("token encryption", () => {
-  it("round-trips and rejects tampering", () => {
-    const sealed = encryptSecret("access-sandbox-123");
-    expect(sealed).not.toContain("access-sandbox");
-    expect(decryptSecret(sealed)).toBe("access-sandbox-123");
-    const parts = sealed.split(".");
-    parts[3] = parts[3].slice(0, -2) + (parts[3].endsWith("AA") ? "BB" : "AA");
-    expect(() => decryptSecret(parts.join("."))).toThrow();
-  });
-
-  it("gives Plaid an opaque user id", () => {
-    expect(opaqueUserId("sb:abc")).toMatch(/^[0-9a-f]{40}$/);
-    expect(opaqueUserId("sb:abc")).not.toBe(opaqueUserId("sb:abd"));
-  });
-});
-
-describe("Plaid mapping", () => {
-  it("maps accounts, transactions and holdings", () => {
-    expect(mapAccount({ account_id: "a1", name: "Checking", mask: "0000", type: "depository", subtype: "checking", balances: { current: 110, available: 100, iso_currency_code: "USD" } })).toEqual({
-      id: "a1", name: "Checking", mask: "0000", type: "depository", subtype: "checking", current: 110, available: 100, currency: "USD",
-    });
-    const t = mapTransaction({ transaction_id: "t1", account_id: "a1", date: "2026-11-01", name: "UBER 123", merchant_name: "Uber", amount: 12.5, iso_currency_code: "USD", pending: false, personal_finance_category: { primary: "TRANSPORTATION" } });
-    expect(t).toMatchObject({ name: "Uber", category: "transportation", amount: 12.5 });
-    const h = mapHoldings(
-      [{ security_id: "s1", quantity: 3, cost_basis: 300, institution_price: 120, institution_value: 360, iso_currency_code: "USD" }],
-      [{ security_id: "s1", ticker_symbol: "aapl", name: "Apple Inc.", type: "equity" }],
-    );
-    expect(h[0]).toMatchObject({ ticker: "AAPL", quantity: 3, costBasis: 300, value: 360 });
-  });
-});
 
 describe("Finnhub parsing", () => {
   it("keeps valid news and known metrics", () => {

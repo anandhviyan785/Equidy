@@ -1,5 +1,4 @@
 import { useAuth, useChats, usePortfolio, useSettings, type AuthUser, type ProviderId } from "@/store";
-import { clearBanking } from "./banking";
 
 export type Providers = Record<ProviderId, boolean>;
 
@@ -79,7 +78,6 @@ export async function signOut() {
   try {
     await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
   } catch { /* server unreachable: local sign-out still applies */ }
-  clearBanking();
   useAuth.getState().setUser(null);
 }
 
@@ -92,6 +90,5 @@ export async function deleteAccount() {
   }
   usePortfolio.setState({ holdings: [], owner: null });
   useChats.getState().clearAll();
-  clearBanking();
   useAuth.getState().setUser(null);
 }

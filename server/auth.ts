@@ -4,7 +4,6 @@ import { Apple, Google, MicrosoftEntraId, OAuth2RequestError, decodeIdToken, gen
 import { AccountError, accountsEnabled, createAccount, deleteAccount, rateLimit, verifyAccount } from "./accounts.js";
 import { appUrl, getEnv } from "./env.js";
 import { deleteUserData } from "./userdata.js";
-import { removeAllItems } from "./plaid.js";
 
 // Sign-in: email + password accounts (stored in Postgres, see accounts.ts) and OAuth with
 // Google, Microsoft (Entra ID) and Apple. Each OAuth provider is enabled when its credentials are set.
@@ -160,7 +159,6 @@ authRouter.post("/delete", async (req, res) => {
   const user = readSession(req);
   if (!user) return void res.status(401).json({ error: "Please sign in to continue." });
   try {
-    await removeAllItems(user.id).catch((e) => console.error("[equidy] couldn't unlink banks during deletion:", e));
     await deleteUserData(user.id);
     if (user.provider === "email") await deleteAccount(user.id.replace(/^email:/, ""));
     setCookie(res, SESSION_COOKIE, "", { maxAge: 0 });

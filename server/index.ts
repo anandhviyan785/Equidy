@@ -23,5 +23,5 @@ app.listen(PORT, async () => {
   console.log(`[equidy] sign-in: ${authEnabled() ? on.join(", ") : "not configured (set DATABASE_URL for email accounts)"}`);
   const s = servicesStatus();
   const flag = (b: boolean) => (b ? "on" : "off");
-  console.log(`[equidy] quotes ${flag(s.quotes)} · history ${flag(s.history)} · intelligence ${flag(s.intel)} · cloud sync ${flag(s.sync)} · banking ${flag(s.banking)}`);
+  console.log(`[equidy] quotes ${flag(s.quotes)} · history ${flag(s.history)} · intelligence ${flag(s.intel)} · cloud sync ${flag(s.sync)}`);
 });

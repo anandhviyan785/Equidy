@@ -2,17 +2,14 @@ import express, { type Request, type Response } from "express";
 import { readSession, requireAuth, requireUser, type SessionUser } from "./auth.js";
 import { getCompanyIntel, getMarketNews, intelEnabled } from "./finnhub.js";
 import { getHistory, getQuotes, isSymbol, marketStatus } from "./market.js";
-import { createLinkToken, exchangePublicToken, getAccounts, getHoldings, getTransactions, plaidStatus, PlaidError, removeItem } from "./plaid.js";
 import { DataError, loadUserData, parseUserData, saveUserData, syncEnabled } from "./userdata.js";
 import { rateLimit, AccountError } from "./accounts.js";
 
-// REST routes for market data (Alpha Vantage/Finnhub), intelligence (Finnhub), cloud sync (Postgres)
-// and bank connections (Plaid).
+// REST routes for market data (Alpha Vantage/Finnhub), intelligence (Finnhub) and cloud sync (Postgres).
 
 export function servicesStatus() {
   const m = marketStatus();
-  const p = plaidStatus();
-  return { quotes: m.quotes, quotesRealtime: m.realtime, history: m.history, historyFull: m.premium, intel: intelEnabled(), sync: syncEnabled(), banking: p.enabled, bankingEnv: p.environment };
+  return { quotes: m.quotes, quotesRealtime: m.realtime, history: m.history, historyFull: m.premium, intel: intelEnabled(), sync: syncEnabled() };
 }
 
 const user = (res: Response) => res.locals.user as SessionUser;
@@ -23,9 +20,9 @@ function handle(fn: (req: Request, res: Response) => Promise<unknown>) {
       const out = await fn(req, res);
       if (!res.headersSent) res.json(out);
     } catch (err) {
-      const status = err instanceof PlaidError || err instanceof DataError || err instanceof AccountError ? err.status : 500;
+      const status = err instanceof DataError || err instanceof AccountError ? err.status : 500;
       if (status >= 500) console.error(`[equidy] ${req.method} ${req.originalUrl}:`, err);
-      if (!res.headersSent) res.status(status).json({ error: status >= 500 && !(err instanceof PlaidError) ? "Something went wrong on our side. Please try again." : (err as Error).message });
+      if (!res.headersSent) res.status(status).json({ error: status >= 500 ? "Something went wrong on our side. Please try again." : (err as Error).message });
     }
   };
 }
@@ -107,57 +104,6 @@ apiRouter.put(
   handle(async (req, res) => {
     if (!syncEnabled()) throw new DataError("Cloud sync isn't set up on this server.", 503);
     await saveUserData(user(res).id, parseUserData(req.body));
-    return { ok: true };
-  }),
-);
-
-// ---------------- banking (Plaid) ----------------
-
-apiRouter.post(
-  "/plaid/link-token",
-  requireUser,
-  throttle("plaid-link", 10),
-  handle(async (_req, res) => createLinkToken(user(res).id)),
-);
-
-apiRouter.post(
-  "/plaid/exchange",
-  requireUser,
-  throttle("plaid-exchange", 10),
-  handle(async (req, res) => {
-    const { publicToken, institution } = (req.body ?? {}) as { publicToken?: unknown; institution?: unknown };
-    if (typeof publicToken !== "string" || !publicToken.startsWith("public-")) throw new PlaidError("Missing bank connection token.", 400);
-    return exchangePublicToken(user(res).id, publicToken, typeof institution === "string" ? institution : null);
-  }),
-);
-
-apiRouter.get(
-  "/plaid/accounts",
-  requireUser,
-  throttle("plaid-read", 30),
-  handle(async (_req, res) => ({ institutions: await getAccounts(user(res).id) })),
-);
-
-apiRouter.get(
-  "/plaid/transactions",
-  requireUser,
-  throttle("plaid-read-tx", 20),
-  handle(async (req, res) => ({ transactions: await getTransactions(user(res).id, Number(req.query.days) || 30) })),
-);
-
-apiRouter.get(
-  "/plaid/holdings",
-  requireUser,
-  throttle("plaid-read-h", 20),
-  handle(async (_req, res) => ({ holdings: await getHoldings(user(res).id) })),
-);
-
-apiRouter.delete(
-  "/plaid/items/:itemId",
-  requireUser,
-  throttle("plaid-remove", 10),
-  handle(async (req, res) => {
-    await removeItem(user(res).id, String(req.params.itemId));
     return { ok: true };
   }),
 );
