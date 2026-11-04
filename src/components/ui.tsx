@@ -71,7 +71,7 @@ export function Segmented<T extends string>({ value, options, onChange, size = "
             value === o ? "bg-elevated text-fg" : "text-muted hover:text-fg",
           )}
         >
-          {o}
+          {o.charAt(0).toUpperCase() + o.slice(1)}
         </button>
       ))}
     </div>
