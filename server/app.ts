@@ -1,6 +1,9 @@
 import express from "express";
 import { authRouter, requireAuth } from "./auth.js";
 import { createResponse, describeError, hasOpenAIKey, streamResponse } from "./openai.js";
+import { apiRouter, servicesStatus } from "./api.js";
+import { getCompanyIntel, getMarketNews, intelToText } from "./finnhub.js";
+import { isSymbol } from "./market.js";
 
 export const MODEL = process.env.EQUIDY_MODEL ?? "gpt-6.1-sol";
 export const hasKey = hasOpenAIKey();
@@ -17,7 +20,9 @@ Personality:
 - If the user seems worried or upset, acknowledge the feeling first, then help calmly.
 
 Guidelines:
-- Ground answers in the PLATFORM CONTEXT provided (the user's portfolio, watchlist, market levels and reference fundamentals). Quote specific numbers from it when relevant. Market data in the platform is simulated; never claim it is live exchange data.
+- Ground answers in the PLATFORM CONTEXT provided (the user's portfolio, watchlist, market levels, reference fundamentals, Finnhub intelligence and any linked bank accounts). Quote specific numbers from it when relevant.
+- The context says which prices are live (Alpha Vantage or Finnhub) and which are simulated. Never present a simulated number as real market data, and mention the source when it matters.
+- Linked bank balances and transactions are private: use them only to answer the user's own questions about their finances.
 - Use Markdown: short headings, tables for numeric comparisons, bullet points for takeaways. Lead with the answer, then the supporting detail.
 - Show the arithmetic for calculations (compound growth, returns, ratios) so users can learn the method.
 - Be balanced: give both the bull and bear case, name the key risks, and distinguish facts from opinion.
@@ -27,11 +32,12 @@ Guidelines:
 // The Express app is shared by the long-running server (server/index.ts) and the Vercel function (api/index.ts).
 export const app = express();
 app.set("trust proxy", 1); // behind Vercel/Render proxies: req.ip is the visitor, not the proxy
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "4mb" }));
 app.use("/api/auth", authRouter);
+app.use("/api", apiRouter);
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, ai: hasKey, model: hasKey ? MODEL : null });
+  res.json({ ok: true, ai: hasKey, model: hasKey ? MODEL : null, services: servicesStatus() });
 });
 
 type Incoming = { role: "user" | "assistant"; content: string };
@@ -69,7 +75,7 @@ app.post("/api/chat", requireAuth, async (req, res) => {
     res.status(503).json({ error: "OpenAI is not configured on this server." });
     return;
   }
-  const { messages, context } = req.body as { messages?: Incoming[]; context?: string };
+  const { messages, context, symbols } = req.body as { messages?: Incoming[]; context?: string; symbols?: unknown };
   const clean = (messages ?? [])
     .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
     .slice(-30)
@@ -87,6 +93,7 @@ app.post("/api/chat", requireAuth, async (req, res) => {
   });
   const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
+  const intel = await intelContext(symbols);
   const abort = new AbortController();
   res.on("close", () => abort.abort());
 
@@ -96,7 +103,7 @@ app.post("/api/chat", requireAuth, async (req, res) => {
         model: MODEL,
         maxOutputTokens: 16000,
         effort: "medium",
-        instructions: `${SYSTEM}\n\nPLATFORM CONTEXT\n${String(context ?? "").slice(0, 30_000)}`,
+        instructions: `${SYSTEM}\n\nPLATFORM CONTEXT\n${String(context ?? "").slice(0, 30_000)}${intel}`,
         input: clean,
         signal: abort.signal,
       },
@@ -117,3 +124,19 @@ app.post("/api/chat", requireAuth, async (req, res) => {
     res.end();
   }
 });
+
+/** Finnhub intelligence for the companies the user mentioned, plus today's market headlines. */
+async function intelContext(raw: unknown): Promise<string> {
+  const symbols = (Array.isArray(raw) ? raw : []).map((s) => String(s).toUpperCase()).filter(isSymbol).slice(0, 3);
+  try {
+    const [news, ...companies] = await Promise.all([getMarketNews(), ...symbols.map((s) => getCompanyIntel(s))]);
+    const parts: string[] = [];
+    const found = companies.filter((c): c is NonNullable<typeof c> => !!c);
+    if (found.length) parts.push(`FINNHUB INTELLIGENCE\n${found.map(intelToText).join("\n\n")}`);
+    if (news?.length) parts.push(`MARKET HEADLINES (Finnhub)\n${news.slice(0, 6).map((n) => `- ${n.headline} (${n.source}, ${new Date(n.datetime).toISOString().slice(0, 10)})`).join("\n")}`);
+    return parts.length ? `\n\n${parts.join("\n\n")}`.slice(0, 12_000) : "";
+  } catch (err) {
+    console.warn("[equidy] intelligence context unavailable:", (err as Error).message);
+    return "";
+  }
+}

@@ -1,90 +1,71 @@
-import { beforeAll, afterAll, describe, expect, it, vi } from "vitest";
-import type { AddressInfo } from "node:net";
-import type { Server } from "node:http";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { accountErrorFrom, createAccount, rateLimit, validate, verifyAccount } from "../server/accounts";
+import { describeUser } from "../server/supabase";
+import { UpstreamError } from "../server/http";
 
-// In-memory stand-in for the Postgres HTTP driver, covering the three queries accounts.ts runs.
-vi.mock("@neondatabase/serverless", () => {
-  const users: Record<string, unknown>[] = [];
-  return {
-    neon: () => async (strings: TemplateStringsArray, ...v: unknown[]) => {
-      const q = strings.join("?");
-      if (q.includes("CREATE TABLE")) return [];
-      if (q.includes("INSERT INTO")) {
-        if (users.some((u) => u.email === v[1])) return [];
-        const row = { id: v[0], email: v[1], name: v[2], password_hash: v[3] };
-        users.push(row);
-        return [{ id: row.id, email: row.email, name: row.name }];
-      }
-      if (q.includes("DELETE")) { const i = users.findIndex((u) => u.id === v[0]); if (i >= 0) users.splice(i, 1); return []; }
-      if (q.includes("SELECT")) return users.filter((u) => u.email === v[0]);
-      throw new Error("unexpected query " + q);
-    },
-  };
+const fetchMock = vi.fn();
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+  process.env.SUPABASE_URL = "https://proj.supabase.co";
+  process.env.SUPABASE_ANON_KEY = "sb_publishable_test";
+});
+afterEach(() => {
+  fetchMock.mockReset();
+  vi.unstubAllGlobals();
 });
 
-let server: Server;
-let base = "";
-
-beforeAll(async () => {
-  process.env.DATABASE_URL = "postgres://test";
-  process.env.SESSION_SECRET = "test-secret";
-  const { app } = await import("../server/app.js");
-  server = app.listen(0);
-  base = `http://localhost:${(server.address() as AddressInfo).port}`;
-});
-afterAll(() => server.close());
-
-const post = (path: string, body: object, cookie = "") =>
-  fetch(base + path, { method: "POST", headers: { "Content-Type": "application/json", cookie }, body: JSON.stringify(body) });
-
-describe("email accounts", () => {
-  it("reports accounts as enabled", async () => {
-    const j = await (await fetch(base + "/api/auth/session")).json();
-    expect(j.accounts).toBe(true);
-    expect(j.user).toBeNull();
+describe("email accounts (Supabase Auth)", () => {
+  it("validates input before calling Supabase", () => {
+    expect(() => validate({ name: "A", email: "bad", password: "longenough" }, true)).toThrow("valid email");
+    expect(() => validate({ name: "A", email: "a@b.co", password: "short" }, true)).toThrow("8 characters");
+    expect(() => validate({ email: "a@b.co", password: "x" }, true)).toThrow();
+    expect(validate({ email: " A@B.CO ", password: "x" }, false).email).toBe("a@b.co");
   });
 
-  it("validates input", async () => {
-    expect((await post("/api/auth/signup", { name: "A", email: "bad", password: "longenough" })).status).toBe(400);
-    expect((await post("/api/auth/signup", { name: "A", email: "a@b.co", password: "short" })).status).toBe(400);
+  it("signs up and returns the account when Supabase issues a session", async () => {
+    fetchMock.mockResolvedValue(json({ access_token: "jwt", user: { id: "u1", email: "a@b.co", user_metadata: { name: "Ada" } } }));
+    const r = await createAccount({ name: "Ada", email: "a@b.co", password: "longenough" });
+    expect(r).toEqual({ account: { id: "u1", email: "a@b.co", name: "Ada" }, pending: false });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/^https:\/\/proj\.supabase\.co\/auth\/v1\/signup\?redirect_to=/);
+    expect(init.headers.apikey).toBe("sb_publishable_test");
+    expect(JSON.parse(init.body)).toMatchObject({ email: "a@b.co", password: "longenough", data: { name: "Ada" } });
   });
 
-  it("signs up, rejects duplicates, signs in and keeps a session", async () => {
-    const res = await post("/api/auth/signup", { name: "Ada", email: "Ada@Example.com", password: "correct horse" });
-    expect(res.status).toBe(200);
-    const cookie = res.headers.get("set-cookie")!.split(";")[0];
-    expect((await res.json()).user).toMatchObject({ name: "Ada", email: "ada@example.com", provider: "email" });
-
-    expect((await post("/api/auth/signup", { name: "Ada", email: "ada@example.com", password: "another one" })).status).toBe(409);
-    expect((await post("/api/auth/signin", { email: "ada@example.com", password: "wrong password" })).status).toBe(401);
-    expect((await post("/api/auth/signin", { email: "nobody@example.com", password: "whatever1" })).status).toBe(401);
-
-    const ok = await post("/api/auth/signin", { email: "ADA@example.com ", password: "correct horse" });
-    expect(ok.status).toBe(200);
-
-    const session = await (await fetch(base + "/api/auth/session", { headers: { cookie } })).json();
-    expect(session.user.email).toBe("ada@example.com");
+  it("reports pending when email confirmation is required", async () => {
+    fetchMock.mockResolvedValue(json({ id: "u1", email: "a@b.co", confirmation_sent_at: "2026-11-04" }));
+    expect(await createAccount({ name: "Ada", email: "a@b.co", password: "longenough" })).toEqual({ account: null, pending: true });
   });
 
-  it("requires sign-in for chat once accounts are enabled", async () => {
-    expect((await post("/api/chat", { messages: [{ role: "user", content: "hi" }] })).status).toBe(401);
+  it("maps Supabase errors to friendly messages", async () => {
+    fetchMock.mockResolvedValue(json({ code: 400, error_code: "invalid_credentials", msg: "Invalid login credentials" }, 400));
+    const err = await verifyAccount({ email: "a@b.co", password: "wrongpass" }).catch((e) => e);
+    expect(err.message).toBe("Incorrect email or password.");
+    expect(err.status).toBe(401);
+    expect(accountErrorFrom(new UpstreamError("Supabase", "x", 422, "user_already_exists")).status).toBe(409);
+    expect(accountErrorFrom(new UpstreamError("Supabase", "Email not confirmed", 400, "email_not_confirmed")).status).toBe(403);
+    expect(accountErrorFrom(new UpstreamError("Supabase", "x", 429)).status).toBe(429);
   });
 
-  it("stores only a salted hash", async () => {
-    const { neon } = await import("@neondatabase/serverless");
-    const sql = neon("x") as unknown as (s: TemplateStringsArray, ...v: unknown[]) => Promise<{ password_hash: string }[]>;
-    const rows = await sql(Object.assign(["SELECT ", ""], { raw: [] }) as unknown as TemplateStringsArray, "ada@example.com");
-    expect(rows[0].password_hash).toMatch(/^scrypt:/);
-    expect(rows[0].password_hash).not.toContain("correct horse");
+  it("refuses when Supabase isn't configured", async () => {
+    delete process.env.SUPABASE_URL;
+    const err = await verifyAccount({ email: "a@b.co", password: "whatever1" }).catch((e) => e);
+    expect(err.status).toBe(503);
   });
-});
 
-describe("account deletion", () => {
-  it("deletes the signed-in account so it can no longer sign in", async () => {
-    const res = await post("/api/auth/signup", { name: "Del", email: "del@example.com", password: "password123" });
-    const cookie = res.headers.get("set-cookie")!.split(";")[0];
-    expect((await post("/api/auth/delete", {})).status).toBe(401);
-    expect((await post("/api/auth/delete", {}, cookie)).status).toBe(200);
-    expect((await post("/api/auth/signin", { email: "del@example.com", password: "password123" })).status).toBe(401);
+  it("describes OAuth users with their provider", () => {
+    expect(describeUser({ id: "1", email: "x@y.z", app_metadata: { provider: "azure" }, user_metadata: { full_name: "Grace", avatar_url: "https://a/b.png" } })).toEqual({
+      name: "Grace",
+      email: "x@y.z",
+      avatar: "https://a/b.png",
+      provider: "microsoft",
+    });
+  });
+
+  it("rate-limits repeated attempts", () => {
+    for (let i = 0; i < 3; i++) rateLimit("test-key", 3);
+    expect(() => rateLimit("test-key", 3)).toThrow("Too many attempts");
   });
 });

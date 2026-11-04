@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun, Monitor, Cpu, WifiOff, RefreshCw, Download, Trash2, RotateCcw } from "lucide-react";
 import { useChats, usePortfolio, useSettings, type Theme } from "@/store";
-import { aiStatus, type AIStatus } from "@/lib/ai";
+import { aiStatus, type AIStatus, type Services } from "@/lib/ai";
 import { cn } from "@/lib/format";
 import { Page, PageHeader, Segmented, Toggle } from "@/components/ui";
 
@@ -68,7 +68,7 @@ export function SettingsPage() {
               {["USD", "EUR", "GBP", "INR", "JPY"].map((c) => <option key={c}>{c}</option>)}
             </select>
           </Row>
-          <Row label="Live price updates" hint="Animate the simulated market feed every few seconds.">
+          <Row label="Live price updates" hint="Animate simulated prices every few seconds. Prices from a live provider are never altered.">
             <Toggle checked={s.liveTicks} onChange={(v) => s.set({ liveTicks: v })} label="Live price updates" />
           </Row>
         </Section>
@@ -88,6 +88,14 @@ export function SettingsPage() {
           </Row>
         </Section>
 
+        <Section title="Data sources" desc="Where prices, research and account data come from.">
+          {sourceRows(status?.services).map(([label, value, hint]) => (
+            <Row key={label} label={label} hint={hint}>
+              <span className="chip">{value}</span>
+            </Row>
+          ))}
+        </Section>
+
         <Section title="Analytics">
           <Row label="Risk-free rate" hint="Used for Sharpe, Sortino and alpha.">
             <div className="relative w-28">
@@ -97,7 +105,7 @@ export function SettingsPage() {
           </Row>
         </Section>
 
-        <Section title="Data" desc="Your portfolio, chats and settings are stored in this browser.">
+        <Section title="Data" desc={status?.services?.sync ? "Your portfolio, chats and settings are saved to your account (Supabase) and kept in sync across devices." : "Your portfolio, chats and settings are stored in this browser."}>
           <Row label="Export data" hint="Download settings, portfolio and conversations as JSON.">
             <button className="btn-outline" onClick={exportData}><Download className="h-4 w-4" /> Export</button>
           </Row>
@@ -115,4 +123,15 @@ export function SettingsPage() {
       </div>
     </Page>
   );
+}
+
+function sourceRows(svc: Services | undefined): [string, string, string][] {
+  if (!svc) return [["Market data", "Simulated", "The Equidy server isn't reachable, so all market data is simulated."]];
+  return [
+    ["Stock prices", svc.quotesRealtime ? "Live · Finnhub / Alpha Vantage" : svc.quotes ? "Alpha Vantage (delayed)" : "Simulated", svc.quotes ? "Indices stay simulated." : "Add ALPHAVANTAGE_API_KEY or FINNHUB_API_KEY on the server."],
+    ["Price history", svc.history ? (svc.historyFull ? "Alpha Vantage · full" : "Alpha Vantage · last 100 days") : "Simulated", svc.history && !svc.historyFull ? "Older points are simulated. An Alpha Vantage premium key unlocks full history." : ""],
+    ["Market intelligence", svc.intel ? "Finnhub" : "Off", "Company profiles, analyst ratings, earnings and news."],
+    ["Cloud sync", svc.sync ? "Supabase" : "This browser only", ""],
+    ["Bank connections", svc.banking ? `Plaid · ${svc.bankingEnv}` : "Off", ""],
+  ];
 }

@@ -6,6 +6,7 @@ import { Change } from "./ui";
 
 export function TickerTape() {
   const prices = useMarket((s) => s.prices);
+  const anyLive = useMarket((s) => Object.keys(s.sources).length > 0);
   return (
     <div className="flex shrink-0 items-center gap-6 overflow-x-auto border-b border-line bg-surface/60 px-4 py-2 text-xs [scrollbar-width:none]">
       {INDICES.map((i) => {
@@ -19,7 +20,7 @@ export function TickerTape() {
         );
       })}
       <span className="ml-auto flex shrink-0 items-center gap-1.5 text-muted">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" /> Simulated feed
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" /> {anyLive ? "Indices simulated · stock prices live" : "Simulated feed"}
       </span>
     </div>
   );

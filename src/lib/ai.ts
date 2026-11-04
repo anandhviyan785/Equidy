@@ -2,10 +2,22 @@ import { answer, streamText, tickerMentions } from "./engine";
 import { buildSnapshot, snapshotToText } from "./context";
 import { cleanTitle } from "./titles";
 
+export interface Services {
+  quotes: boolean; // live quotes (Finnhub and/or Alpha Vantage)
+  quotesRealtime: boolean; // quotes refresh every minute (Finnhub, or Alpha Vantage premium)
+  history: boolean; // Alpha Vantage daily history
+  historyFull: boolean; // full history (Alpha Vantage premium) rather than the last ~100 days
+  intel: boolean; // Finnhub intelligence
+  sync: boolean; // Supabase cloud sync
+  banking: boolean; // Plaid
+  bankingEnv: "sandbox" | "production";
+}
+
 export interface AIStatus {
   online: boolean; // backend reachable
   ai: boolean; // OpenAI configured
   model?: string;
+  services?: Services;
 }
 
 let statusPromise: Promise<AIStatus> | null = null;
@@ -14,7 +26,7 @@ export function aiStatus(refresh = false): Promise<AIStatus> {
   if (!statusPromise || refresh) {
     statusPromise = fetch("/api/health", { signal: AbortSignal.timeout(2500) })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((j) => ({ online: true, ai: !!j.ai, model: j.model }))
+      .then((j) => ({ online: true, ai: !!j.ai, model: j.model, services: j.services as Services | undefined }))
       .catch(() => ({ online: false, ai: false }));
   }
   return statusPromise;
@@ -38,7 +50,7 @@ export async function streamChat({ history, onDelta, signal }: StreamArgs): Prom
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: history, context: snapshotToText(snap) + fundamentals }),
+      body: JSON.stringify({ messages: history, context: snapshotToText(snap) + fundamentals, symbols: tickerMentions(last).slice(0, 3).map((x) => x.symbol) }),
       signal,
     }).catch((e) => {
       if (signal?.aborted) throw e;

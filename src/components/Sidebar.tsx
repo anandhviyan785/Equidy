@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { NavLink, useMatch, useNavigate } from "react-router-dom";
 import {
   PanelLeftClose, PanelLeftOpen, SquarePen, Search, Briefcase, BarChart3, LineChart, Star, BookOpen, Settings, MessageSquare,
-  MoreHorizontal, Pin, Pencil, Trash2, X, LogOut,
+  MoreHorizontal, Pin, Pencil, Trash2, X, LogOut, Landmark,
 } from "lucide-react";
 import { useAuth, useChats, useSettings } from "@/store";
 import { signOut } from "@/lib/auth";
@@ -14,6 +14,7 @@ const NAV = [
   { to: "/statistics", label: "Statistics", icon: BarChart3 },
   { to: "/markets", label: "Markets", icon: LineChart },
   { to: "/watchlist", label: "Watchlist", icon: Star },
+  { to: "/banking", label: "Banking", icon: Landmark },
   { to: "/research", label: "Financial Research", icon: BookOpen },
 ];
 

@@ -2,11 +2,13 @@ import { BY_SYMBOL, INDICES } from "@/data/securities";
 import { useMarket, usePortfolio, useSettings } from "@/store";
 import { allocationBy, benchmarkHistory, portfolioHistory, positions, riskMetrics, summarize } from "./finance";
 import { money, pct, price } from "./format";
+import { liveDays } from "./market";
+import { bankingContext } from "./banking";
 
 /** A snapshot of the user's financial state, shared by the OpenAI backend and the offline engine. */
 export function buildSnapshot() {
   const { holdings, watchlist } = usePortfolio.getState();
-  const { prices } = useMarket.getState();
+  const { prices, sources } = useMarket.getState();
   const { riskFree, riskProfile, responseStyle, profile } = useSettings.getState();
   const rows = positions(holdings, prices);
   const total = summarize(rows);
@@ -19,6 +21,7 @@ export function buildSnapshot() {
     watchlist: watchlist.map((s) => ({ symbol: s, ...prices[s] })),
     indices: INDICES.map((i) => ({ ...i, ...prices[i.symbol] })),
     prices,
+    sources,
     riskProfile,
     userName: profile.name.trim(),
     responseStyle,
@@ -47,5 +50,23 @@ export function snapshotToText(s: Snapshot): string {
   lines.push("INDICES: " + s.indices.map((i) => `${i.name} ${price(i.price)} (${pct(i.price / i.prevClose - 1)})`).join(", "));
   const covered = Object.values(BY_SYMBOL).filter((x) => x.financials).map((x) => x.symbol);
   lines.push(`\nReference fundamentals available in-app for: ${covered.join(", ")}.`);
+  lines.push(dataSources(s));
+  const bank = bankingContext();
+  if (bank) lines.push(bank);
   return lines.join("\n");
+}
+
+const SOURCE_LABEL = { alphavantage: "Alpha Vantage", finnhub: "Finnhub" } as const;
+
+/** Tells the model which prices and histories are real and which are simulated. */
+function dataSources(s: Snapshot): string {
+  const live = Object.entries(s.sources);
+  if (!live.length) return "\nDATA SOURCES: all prices, indices and histories in this context are simulated (no market data provider is connected).";
+  const by = (src: keyof typeof SOURCE_LABEL) => live.filter(([, v]) => v === src).map(([k]) => k);
+  const parts = (Object.keys(SOURCE_LABEL) as (keyof typeof SOURCE_LABEL)[]).filter((k) => by(k).length).map((k) => `${SOURCE_LABEL[k]}: ${by(k).join(", ")}`);
+  const hist = live.map(([k]) => k).filter((k) => liveDays(k) > 0).map((k) => `${k} (${liveDays(k)} days)`);
+  return [
+    `\nDATA SOURCES: live prices — ${parts.join("; ")}. Every other symbol and all indices are simulated.`,
+    hist.length ? `Real daily history (Alpha Vantage): ${hist.join(", ")}; older history and risk statistics beyond that window are simulated.` : "Price histories and risk statistics are simulated.",
+  ].join("\n");
 }

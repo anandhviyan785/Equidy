@@ -28,6 +28,8 @@ export function LoginPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const urlError = useMemo(() => new URLSearchParams(location.search).get("error"), [location.search]);
   const [error, setError] = useState<string | null>(urlError);
+  const confirmed = useMemo(() => new URLSearchParams(location.search).has("confirmed"), [location.search]);
+  const [notice, setNotice] = useState<string | null>(confirmed ? "Email confirmed — sign in to continue." : null);
 
   useEffect(() => { loadAuth().then(setInfo); }, []);
   if (user) return <Navigate to="/" replace />;
@@ -38,10 +40,18 @@ export function LoginPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     setBusy("email");
     try {
-      if (mode === "Create account") await signUpWithEmail(name, email, password);
-      else await signInWithEmail(email, password);
+      if (mode === "Create account") {
+        const pending = await signUpWithEmail(name, email, password);
+        if (pending) {
+          setNotice(pending);
+          setMode("Sign in");
+          setBusy(null);
+          return;
+        }
+      } else await signInWithEmail(email, password);
       navigate("/", { replace: true });
     } catch (err) {
       setError((err as Error).message);
@@ -58,6 +68,10 @@ export function LoginPage() {
           <p className="mt-2 text-[15px] text-muted">
             {mode === "Sign in" ? "Sign in to your portfolio, markets and AI analyst." : "Start tracking your portfolio and asking Equidy anything about your finances."}
           </p>
+
+          {notice && (
+            <div role="status" className="mt-6 rounded-xl border border-line bg-elevated px-3.5 py-2.5 text-sm">{notice}</div>
+          )}
 
           {error && (
             <div role="alert" className="mt-6 rounded-xl border border-down/40 bg-down/10 px-3.5 py-2.5 text-sm text-down">{error}</div>
@@ -175,7 +189,7 @@ function MarketPanel() {
             );
           })}
         </div>
-        <p className="mt-4 text-xs text-muted">Simulated market data.</p>
+        <p className="mt-4 text-xs text-muted">Preview data shown before sign-in is simulated.</p>
       </div>
     </aside>
   );

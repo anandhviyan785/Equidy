@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Star } from "lucide-react";
 import { INDICES, SECURITIES, type Sector } from "@/data/securities";
@@ -8,6 +8,8 @@ import { cn, price } from "@/lib/format";
 import { Change, ChangePill, Page, PageHeader, Segmented } from "@/components/ui";
 import { PriceChart, ReturnBars, Sparkline } from "@/components/charts";
 import { SymbolSearch } from "@/components/SymbolSearch";
+import { NewsList } from "@/components/IntelPanel";
+import { getMarketNews, type NewsItem } from "@/lib/live";
 
 export function MarketsPage() {
   const navigate = useNavigate();
@@ -92,6 +94,7 @@ export function MarketsPage() {
         </div>
         <SecurityTable items={stocks.filter((x) => filter === "All" || x.s.sector === filter)} />
       </div>
+      <MarketNews />
     </Page>
   );
 }
@@ -159,6 +162,28 @@ export function SecurityTable({ items }: { items: { s: (typeof SECURITIES)[numbe
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/** Market headlines from Finnhub; hidden when intelligence isn't configured. */
+function MarketNews() {
+  const [news, setNews] = useState<NewsItem[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    void getMarketNews().then((n) => live && setNews(n));
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (!news?.length) return null;
+  return (
+    <div className="card mt-4 p-5">
+      <div className="mb-1 flex items-center justify-between">
+        <div className="label">Market news</div>
+        <span className="text-[11px] text-muted">Finnhub</span>
+      </div>
+      <NewsList items={news} />
     </div>
   );
 }

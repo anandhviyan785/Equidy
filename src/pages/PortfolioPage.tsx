@@ -17,6 +17,7 @@ export function PortfolioPage() {
   const holdings = usePortfolio((s) => s.holdings);
   const { removeHolding } = usePortfolio();
   const prices = useMarket((s) => s.prices);
+  const historyVersion = useMarket((s) => s.historyVersion);
   const navigate = useNavigate();
   const [range, setRange] = useState<Range>("1Y");
   const [allocBy, setAllocBy] = useState<"Sector" | "Holding">("Sector");
@@ -26,8 +27,8 @@ export function PortfolioPage() {
 
   const rows = useMemo(() => positions(holdings, prices), [holdings, prices]);
   const total = summarize(rows);
-  const hist = useMemo(() => portfolioHistory(holdings), [holdings]);
-  const bench = useMemo(() => benchmarkHistory(), []);
+  const hist = useMemo(() => portfolioHistory(holdings), [holdings, historyVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+  const bench = useMemo(() => benchmarkHistory(), [historyVersion]); // eslint-disable-line react-hooks/exhaustive-deps
   const series = useMemo(() => {
     if (!hist.length) return [];
     const s = sliceRange(hist, range === "1D" ? "1W" : range);

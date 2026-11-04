@@ -47,9 +47,48 @@ function marketShocks(days: number): number[] {
   return shocks;
 }
 
-/** Daily closes for `days` trading days ending today at `endPrice`. */
+// Real daily closes (from Alpha Vantage via the server) replace the simulated series where available.
+const live = new Map<string, Bar[]>();
+
+/** Registers real daily closes for a symbol; later history() calls use them. */
+export function setLiveHistory(symbol: string, bars: Bar[]) {
+  if (bars.length < 2) return;
+  live.set(symbol, bars);
+  for (const k of [...cache.keys()]) if (k.startsWith(`${symbol}_`)) cache.delete(k);
+}
+
+/** Number of real (non-simulated) daily bars held for a symbol, or 0. */
+export const liveDays = (symbol: string) => live.get(symbol)?.length ?? 0;
+
+/**
+ * Joins real bars onto the end of a simulated series so callers still get `days` aligned bars.
+ * The simulated part is rescaled to meet the first real close, and re-dated to end the trading day before it.
+ */
+export function mergeHistory(sim: Bar[], real: Bar[], days: number): Bar[] {
+  const tail = real.slice(-days);
+  const k = days - tail.length;
+  if (k <= 0) return tail;
+  const anchor = sim[k]?.close ?? sim[sim.length - 1].close;
+  const factor = tail[0].close / anchor;
+  const step = DAY * (7 / 5);
+  const head = sim.slice(0, k).map((b, i) => ({ t: tail[0].t - (k - i) * step, close: b.close * factor }));
+  return [...head, ...tail];
+}
+
+/** Daily closes for `days` trading days: real where available, otherwise simulated to end today at `endPrice`. */
 export function history(symbol: string, endPrice: number, vol: number, drift: number, beta = 1, days = 504): Bar[] {
   const key = `${symbol}_${days}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const sim = simulate(symbol, endPrice, vol, drift, beta, days);
+  const real = live.get(symbol);
+  const bars = real ? mergeHistory(sim, real, days) : sim;
+  cache.set(key, bars);
+  return bars;
+}
+
+function simulate(symbol: string, endPrice: number, vol: number, drift: number, beta: number, days: number): Bar[] {
+  const key = `sim:${symbol}_${days}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const rand = rng(hash(symbol));

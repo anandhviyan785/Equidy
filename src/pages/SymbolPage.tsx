@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star, Sparkles, Plus } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BY_SYMBOL } from "@/data/securities";
-import { history, intraday, sliceRange, RANGES, type Range } from "@/lib/market";
+import { history, intraday, liveDays, sliceRange, RANGES, type Range } from "@/lib/market";
+import { ensureHistory } from "@/lib/live";
+import { IntelPanel } from "@/components/IntelPanel";
 import { useMarket, usePortfolio } from "@/store";
 import { cn, money, num, pct, price } from "@/lib/format";
 import { Change, Page, Segmented } from "@/components/ui";
@@ -14,12 +16,17 @@ export function SymbolPage() {
   const { symbol = "" } = useParams();
   const s = BY_SYMBOL[symbol.toUpperCase()];
   const p = useMarket((st) => (s ? st.prices[s.symbol] : undefined));
+  const source = useMarket((st) => (s ? st.sources[s.symbol] : undefined));
+  const historyVersion = useMarket((st) => st.historyVersion);
   const { watchlist, toggleWatch, holdings, addHolding } = usePortfolio();
   const navigate = useNavigate();
   const [range, setRange] = useState<Range>("1Y");
   const colors = useSeriesColors();
 
-  const bars = useMemo(() => (s ? history(s.symbol, s.price, s.vol, s.drift, s.beta) : []), [s]);
+  useEffect(() => {
+    if (s) void ensureHistory(s.symbol);
+  }, [s]);
+  const bars = useMemo(() => (s ? history(s.symbol, s.price, s.vol, s.drift, s.beta) : []), [s, historyVersion]); // eslint-disable-line react-hooks/exhaustive-deps
   const series = useMemo(() => {
     if (!s || !p) return [];
     if (range === "1D") return intraday(s.symbol, p.prevClose, p.price, s.vol);
@@ -49,6 +56,7 @@ export function SymbolPage() {
             <Change value={p.price / p.prevClose - 1} icon />
             <span className="text-xs text-muted">today</span>
           </div>
+          <div className="mt-1 text-[11px] text-muted">{sourceNote(source, liveDays(s.symbol))}</div>
         </div>
         <div className="flex flex-wrap gap-2">
           <button className="btn-outline" onClick={() => toggleWatch(s.symbol)}>
@@ -131,6 +139,13 @@ export function SymbolPage() {
           </div>
         )}
       </div>
+      <IntelPanel symbol={s.symbol} />
     </Page>
   );
+}
+
+function sourceNote(source: "alphavantage" | "finnhub" | undefined, days: number) {
+  const price = source === "finnhub" ? "Live price from Finnhub" : source === "alphavantage" ? "Price from Alpha Vantage" : "Simulated price";
+  const chart = days ? `chart uses ${days} days of real Alpha Vantage history${days < 504 ? ", earlier points simulated" : ""}` : "simulated chart";
+  return `${price} · ${chart}`;
 }

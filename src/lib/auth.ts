@@ -1,4 +1,5 @@
 import { useAuth, useChats, usePortfolio, useSettings, type AuthUser, type ProviderId } from "@/store";
+import { clearBanking } from "./banking";
 
 export type Providers = Record<ProviderId, boolean>;
 
@@ -36,7 +37,7 @@ function signIn(user: AuthUser) {
   s.set({ profile: { ...s.profile, name: user.name, email: user.email ?? s.profile.email } });
 }
 
-async function post(path: string, body: object): Promise<AuthUser> {
+async function post(path: string, body: object): Promise<{ user?: AuthUser; pending?: boolean; message?: string }> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -48,17 +49,22 @@ async function post(path: string, body: object): Promise<AuthUser> {
   } catch {
     throw new Error("Couldn't reach Equidy. Check your connection and try again.");
   }
-  const j = (await res.json().catch(() => ({}))) as { user?: AuthUser; error?: string };
-  if (!res.ok || !j.user) throw new Error(j.error || "Sign-in failed. Please try again.");
-  return j.user;
+  const j = (await res.json().catch(() => ({}))) as { user?: AuthUser; pending?: boolean; message?: string; error?: string };
+  if (!res.ok || (!j.user && !j.pending)) throw new Error(j.error || "Sign-in failed. Please try again.");
+  return j;
 }
 
-export async function signUpWithEmail(name: string, email: string, password: string) {
-  signIn(await post("/api/auth/signup", { name, email, password }));
+/** Creates an account and signs in. Returns a message instead when the email must be confirmed first. */
+export async function signUpWithEmail(name: string, email: string, password: string): Promise<string | null> {
+  const r = await post("/api/auth/signup", { name, email, password });
+  if (r.pending || !r.user) return r.message ?? "Check your email to confirm your account, then sign in.";
+  signIn(r.user);
+  return null;
 }
 
 export async function signInWithEmail(email: string, password: string) {
-  signIn(await post("/api/auth/signin", { email, password }));
+  const r = await post("/api/auth/signin", { email, password });
+  if (r.user) signIn(r.user);
 }
 
 /** Starts the real OAuth redirect. */
@@ -78,6 +84,7 @@ export async function signOut() {
   try {
     await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
   } catch { /* server unreachable: local sign-out still applies */ }
+  clearBanking();
   useAuth.getState().setUser(null);
 }
 
@@ -90,5 +97,6 @@ export async function deleteAccount() {
   }
   usePortfolio.setState({ holdings: [], owner: null });
   useChats.getState().clearAll();
+  clearBanking();
   useAuth.getState().setUser(null);
 }

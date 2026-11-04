@@ -12,6 +12,7 @@ import { ProfilePage } from "@/pages/ProfilePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { TermsPage } from "@/pages/TermsPage";
+import { BankingPage } from "@/pages/BankingPage";
 
 const routes = [
   { path: "/login", element: <LoginPage /> },
@@ -29,6 +30,7 @@ const routes = [
       { path: "symbol/:symbol", element: <SymbolPage /> },
       { path: "watchlist", element: <WatchlistPage /> },
       { path: "research", element: <ResearchPage /> },
+      { path: "banking", element: <BankingPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "profile", element: <ProfilePage /> },
       { path: "*", element: <Navigate to="/" replace /> },

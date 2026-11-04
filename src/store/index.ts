@@ -172,10 +172,18 @@ export const useChats = create<ChatState>()(
 
 // ---------------- Live market (not persisted) ----------------
 
+export type PriceSource = "alphavantage" | "finnhub" | "simulated";
+
 interface MarketState {
   prices: PriceMap;
   updatedAt: number;
+  /** Where each symbol's current price came from (absent = simulated). */
+  sources: Record<string, Exclude<PriceSource, "simulated">>;
+  /** Bumped whenever real history arrives, so memoised charts and statistics recompute. */
+  historyVersion: number;
   tick: () => void;
+  applyQuotes: (q: Record<string, { price: number; prevClose: number; source: "alphavantage" | "finnhub" }>) => void;
+  applyHistory: (symbol: string, last: { price: number; prevClose: number }) => void;
 }
 
 function initialPrices(): PriceMap {
@@ -196,11 +204,35 @@ const VOL: Record<string, number> = Object.fromEntries([...SECURITIES, ...INDICE
 export const useMarket = create<MarketState>()((set) => ({
   prices: initialPrices(),
   updatedAt: Date.now(),
+  sources: {},
+  historyVersion: 0,
+  applyQuotes: (q) =>
+    set((s) => {
+      if (!Object.keys(q).length) return s;
+      const prices = { ...s.prices };
+      const sources = { ...s.sources };
+      for (const [sym, v] of Object.entries(q)) {
+        prices[sym] = { price: v.price, prevClose: v.prevClose };
+        sources[sym] = v.source;
+      }
+      return { prices, sources, updatedAt: Date.now() };
+    }),
+  // Real history without a live quote: use its last two closes so price and chart agree.
+  applyHistory: (symbol, last) =>
+    set((s) => ({
+      historyVersion: s.historyVersion + 1,
+      ...(s.sources[symbol] ? {} : { prices: { ...s.prices, [symbol]: last }, sources: { ...s.sources, [symbol]: "alphavantage" as const } }),
+    })),
+  // Simulated movement only for symbols without real data.
   tick: () =>
     set((s) => {
       const common = (Math.random() - 0.5) * 0.0006;
       const prices: PriceMap = {};
       for (const [sym, p] of Object.entries(s.prices)) {
+        if (s.sources[sym]) {
+          prices[sym] = p;
+          continue;
+        }
         const sigma = (VOL[sym] ?? 0.2) / Math.sqrt(252 * 390);
         const move = common + sigma * (Math.random() - 0.5) * 3.4;
         prices[sym] = { ...p, price: p.price * (1 + move) };

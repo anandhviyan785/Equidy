@@ -16,20 +16,21 @@ type Win = keyof typeof WINDOWS;
 export function StatisticsPage() {
   const holdings = usePortfolio((s) => s.holdings);
   const prices = useMarket((s) => s.prices);
+  const historyVersion = useMarket((s) => s.historyVersion);
   const riskFree = useSettings((s) => s.riskFree);
   const navigate = useNavigate();
   const [win, setWin] = useState<Win>("1Y");
 
   const rows = useMemo(() => positions(holdings, prices), [holdings, prices]);
   const days = WINDOWS[win];
-  const port = useMemo(() => portfolioHistory(holdings).slice(-days - 1), [holdings, days]);
-  const bench = useMemo(() => benchmarkHistory().slice(-days - 1), [days]);
+  const port = useMemo(() => portfolioHistory(holdings).slice(-days - 1), [holdings, days, historyVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+  const bench = useMemo(() => benchmarkHistory().slice(-days - 1), [days, historyVersion]); // eslint-disable-line react-hooks/exhaustive-deps
   const m = useMemo(() => riskMetrics(port, bench, rows.map((r) => r.weight), riskFree), [port, bench, rows, riskFree]);
   const drawdown = useMemo(() => drawdownSeries(port), [port]);
   const monthly = useMemo(() => monthlyReturns(port), [port]);
   const hist = useMemo(() => histogram(returns(port)), [port]);
   const symbols = rows.slice(0, 8).map((r) => r.symbol);
-  const corr = useMemo(() => correlationMatrix(symbols, days), [symbols.join(), days]); // eslint-disable-line react-hooks/exhaustive-deps
+  const corr = useMemo(() => correlationMatrix(symbols, days), [symbols.join(), days, historyVersion]); // eslint-disable-line react-hooks/exhaustive-deps
   const contrib = rows.map((r) => ({ name: r.symbol, value: r.pnlPct })).sort((a, b) => b.value - a.value);
 
   if (!m) {
