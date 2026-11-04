@@ -9,10 +9,10 @@ npm install
 npm run dev          # web on http://localhost:5173, API on :8787
 ```
 
-To get live answers from Claude, set a key before starting the API:
+To get live answers from OpenAI, set a key before starting the API:
 
 ```bash
-cp .env.example .env   # then fill in ANTHROPIC_API_KEY
+cp .env.example .env   # then fill in OPENAI_API_KEY
 export $(grep -v '^#' .env | xargs) && npm run dev
 ```
 
@@ -50,7 +50,7 @@ Provider buttons appear on the login page only for providers that are configured
 
 1. Push this folder to a GitHub repository, with `package.json` at the top level.
 2. At vercel.com, sign up with GitHub, choose **Add New → Project**, and import the repository. The settings come from `vercel.json`, so change nothing.
-3. Under **Environment Variables**, add `SESSION_SECRET` (a long random string). Optionally add `ANTHROPIC_API_KEY` and the sign-in provider keys. For email accounts, add a Neon database from **Storage**.
+3. Under **Environment Variables**, add `SESSION_SECRET` (a long random string). Optionally add `OPENAI_API_KEY` and the sign-in provider keys. For email accounts, add a Neon database from **Storage**.
 4. Click **Deploy**. Your site is at `https://<project>.vercel.app`. `APP_URL` is set automatically from Vercel's production domain.
 
 The frontend is served as static files, and `api/index.ts` runs the same Express app as a serverless function. `render.yaml` and the `Dockerfile` remain for Render or any container host.
@@ -73,7 +73,8 @@ Keyboard: `Ctrl/⌘+B` toggles the sidebar, `Ctrl/⌘+Shift+O` starts a new chat
 ## Architecture
 
 ```
-server/app.ts          Express API: /api/health, /api/chat (SSE streaming via @anthropic-ai/sdk)
+server/app.ts          Express API: /api/health, /api/chat (SSE streaming from the OpenAI Responses API)
+server/openai.ts       Fetch-based OpenAI Responses client (one-shot + SSE streaming)
 server/index.ts        Long-running server (local, Render, Docker): serves dist/ and the API
 api/index.ts           Vercel serverless entry (same Express app)
 server/auth.ts         OAuth sign-in (Google, Microsoft, Apple), signed session cookies
@@ -82,7 +83,7 @@ src/
   lib/market.ts        Deterministic market simulator (seeded GBM with a shared market factor)
   lib/finance.ts       Positions, risk metrics, correlation, compounding
   lib/context.ts       Portfolio/market snapshot shared with the AI
-  lib/ai.ts            Client: Claude via backend, automatic fallback to the offline engine
+  lib/ai.ts            Client: OpenAI via backend, automatic fallback to the offline engine
   lib/engine.ts        Offline analysis engine (intent routing → Markdown)
   lib/chatRunner.ts    Streaming lifecycle (abort, regenerate, survives navigation)
   lib/auth.ts          Session check, OAuth redirect, demo sign-in, sign-out
@@ -91,7 +92,7 @@ src/
 tests/                 Vitest unit tests (finance maths and engine routing)
 ```
 
-**AI backend.** The default model is `claude-opus-5-5` with adaptive thinking at `medium` effort. Server-side refusal fallbacks are on (`fallbacks: "default"`). Override the model with `EQUIDY_MODEL`. The API key stays on the server and is never sent to the browser.
+**AI backend.** Equidy calls the OpenAI Responses API directly with `fetch` (`server/openai.ts`, no SDK). The default model is `gpt-6.1-sol` with reasoning effort `medium` for chat and `low` for titles. Override the model with `EQUIDY_MODEL`, and point at a compatible gateway with `OPENAI_BASE_URL`. The API key stays on the server and is never sent to the browser.
 
 **Market data is simulated.** Prices are reproducible, correlated random walks anchored to reference levels, so the numbers stay consistent across reloads and pages. To use real data, replace `useMarket` and `history()` with a market-data provider; the rest of the app reads only those two.
 

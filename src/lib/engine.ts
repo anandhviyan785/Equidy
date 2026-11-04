@@ -1,4 +1,4 @@
-// Offline analysis engine. Used when no Claude API key is configured on the server
+// Offline analysis engine. Used when no OpenAI API key is configured on the server
 // (or the server is unreachable), so every feature of the app works out of the box.
 // It answers from the same data the rest of the app uses and formats replies as Markdown.
 

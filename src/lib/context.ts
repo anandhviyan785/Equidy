@@ -3,7 +3,7 @@ import { useMarket, usePortfolio, useSettings } from "@/store";
 import { allocationBy, benchmarkHistory, portfolioHistory, positions, riskMetrics, summarize } from "./finance";
 import { money, pct, price } from "./format";
 
-/** A snapshot of the user's financial state, shared by the Claude backend and the offline engine. */
+/** A snapshot of the user's financial state, shared by the OpenAI backend and the offline engine. */
 export function buildSnapshot() {
   const { holdings, watchlist } = usePortfolio.getState();
   const { prices } = useMarket.getState();

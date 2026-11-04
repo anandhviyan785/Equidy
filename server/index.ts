@@ -16,7 +16,7 @@ if (fs.existsSync(dist)) {
 }
 
 app.listen(PORT, () => {
-  console.log(`[equidy] API on http://localhost:${PORT} — ${hasKey ? `Claude enabled (${MODEL})` : "offline engine (set ANTHROPIC_API_KEY to enable Claude)"}`);
+  console.log(`[equidy] API on http://localhost:${PORT} — ${hasKey ? `OpenAI enabled (${MODEL})` : "offline engine (set OPENAI_API_KEY to enable OpenAI)"}`);
   const on = Object.entries(providers).filter(([, v]) => v).map(([k]) => k);
   if (accountsEnabled) on.unshift("email accounts");
   console.log(`[equidy] sign-in: ${authEnabled ? on.join(", ") : "not configured (set DATABASE_URL for email accounts)"}`);

@@ -4,7 +4,7 @@ import { cleanTitle } from "./titles";
 
 export interface AIStatus {
   online: boolean; // backend reachable
-  ai: boolean; // Claude configured
+  ai: boolean; // OpenAI configured
   model?: string;
 }
 
@@ -26,8 +26,8 @@ export interface StreamArgs {
   signal?: AbortSignal;
 }
 
-/** Streams an answer from Claude via the backend, or from the offline engine if Claude is unavailable. */
-export async function streamChat({ history, onDelta, signal }: StreamArgs): Promise<"claude" | "offline"> {
+/** Streams an answer from OpenAI via the backend, or from the offline engine if OpenAI is unavailable. */
+export async function streamChat({ history, onDelta, signal }: StreamArgs): Promise<"openai" | "offline"> {
   const snap = buildSnapshot();
   const last = history[history.length - 1]?.content ?? "";
   const status = await aiStatus();
@@ -46,7 +46,7 @@ export async function streamChat({ history, onDelta, signal }: StreamArgs): Prom
     });
     if (res?.ok && res.body) {
       await readSSE(res.body, onDelta, signal);
-      return "claude";
+      return "openai";
     }
     if (res && res.status !== 503) {
       const msg = await res.text().catch(() => "");
@@ -92,7 +92,7 @@ function safeError(raw: string) {
   }
 }
 
-/** Asks Claude (through the server) for a summary title; null when Claude isn't available. */
+/** Asks OpenAI (through the server) for a summary title; null when OpenAI isn't available. */
 export async function aiTitle(messages: { role: "user" | "assistant"; content: string }[]): Promise<string | null> {
   const status = await aiStatus();
   if (!status.ai) return null;

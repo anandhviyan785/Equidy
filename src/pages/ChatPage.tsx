@@ -136,9 +136,9 @@ export function ChatPage() {
 function StatusBadge({ status }: { status: AIStatus | null }) {
   if (!status) return null;
   return status.ai ? (
-    <span className="chip"><Cpu className="h-3 w-3 text-accent" /> Claude · {status.model}</span>
+    <span className="chip"><Cpu className="h-3 w-3 text-accent" /> OpenAI · {status.model}</span>
   ) : (
-    <span className="chip" title="Set ANTHROPIC_API_KEY on the server to enable Claude">
+    <span className="chip" title="Set OPENAI_API_KEY on the server to enable OpenAI">
       <WifiOff className="h-3 w-3" /> Offline engine
     </span>
   );
@@ -175,7 +175,7 @@ function Message({ m, streaming, canRegenerate, onRegenerate }: { m: ChatMessage
           <div className="mt-2 flex items-center gap-1 text-muted opacity-0 transition-opacity group-hover:opacity-100 max-lg:opacity-100">
             <button className="btn-ghost p-1.5" onClick={copy} aria-label="Copy">{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}</button>
             {canRegenerate && <button className="btn-ghost p-1.5" onClick={onRegenerate} aria-label="Regenerate"><RotateCcw className="h-3.5 w-3.5" /></button>}
-            {m.source && <span className="ml-1 text-[11px]">{m.source === "claude" ? "Claude" : "Offline engine"}</span>}
+            {m.source && <span className="ml-1 text-[11px]">{m.source === "openai" ? "OpenAI" : m.source === "claude" ? "Claude" : "Offline engine"}</span>}
           </div>
         )}
       </div>
@@ -219,7 +219,7 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
         aria-label="Message Equidy"
       />
       <div className={cn("flex shrink-0 items-center", large && "justify-between pl-1 pt-1")}>
-        {large && <div className="text-[11px] text-muted">{status && (status.ai ? `Powered by Claude · ${status.model}` : "Offline analysis engine")}</div>}
+        {large && <div className="text-[11px] text-muted">{status && (status.ai ? `Powered by OpenAI · ${status.model}` : "Offline analysis engine")}</div>}
         {streaming ? (
           <button onClick={onStop} className="grid h-9 w-9 place-items-center rounded-full bg-fg text-bg transition hover:opacity-90" aria-label="Stop generating">
             <Square className="h-3.5 w-3.5 fill-current" />

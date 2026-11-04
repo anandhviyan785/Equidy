@@ -1,10 +1,9 @@
 import express from "express";
-import Anthropic from "@anthropic-ai/sdk";
 import { authRouter, requireAuth } from "./auth.js";
+import { createResponse, describeError, hasOpenAIKey, streamResponse } from "./openai.js";
 
-export const MODEL = process.env.EQUIDY_MODEL ?? "claude-opus-5-5";
-export const hasKey = !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
-const client = hasKey ? new Anthropic() : null;
+export const MODEL = process.env.EQUIDY_MODEL ?? "gpt-6.1-sol";
+export const hasKey = hasOpenAIKey();
 
 const SYSTEM = `You are Equidy, a financial intelligence assistant inside an investment analytics platform.
 
@@ -39,7 +38,7 @@ type Incoming = { role: "user" | "assistant"; content: string };
 
 // Short summary title for a conversation, shown in the sidebar.
 app.post("/api/title", requireAuth, async (req, res) => {
-  if (!client) return void res.status(503).json({ error: "Claude is not configured on this server." });
+  if (!hasKey) return void res.status(503).json({ error: "OpenAI is not configured on this server." });
   const { messages } = req.body as { messages?: Incoming[] };
   const transcript = (messages ?? [])
     .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
@@ -48,19 +47,17 @@ app.post("/api/title", requireAuth, async (req, res) => {
     .join("\n\n");
   if (!transcript) return void res.status(400).json({ error: "No messages to summarise." });
   try {
-    const msg = await client.beta.messages.create({
+    const { text, finish } = await createResponse({
       model: MODEL,
-      max_tokens: 2000,
-      output_config: { effort: "low" },
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      system:
+      maxOutputTokens: 2000,
+      effort: "low",
+      instructions:
         "You name chat conversations for a sidebar. Reply with only a title of 2 to 6 words that summarises what the conversation is about, in Title Case (capitalise every word). No quotes, no emoji, no trailing punctuation. If it is only greetings or small talk, reply: Casual Chat.",
-      messages: [{ role: "user", content: `Conversation:\n\n${transcript}\n\nTitle:` }],
+      input: [{ role: "user", content: `Conversation:\n\n${transcript}\n\nTitle:` }],
+      signal: AbortSignal.timeout(20_000),
     });
-    if (msg.stop_reason === "refusal") return void res.status(422).json({ error: "No title." });
-    const text = msg.content.map((b) => (b.type === "text" ? b.text : "")).join("").trim();
-    res.json({ title: text.slice(0, 80) });
+    if (finish === "refusal" || !text.trim()) return void res.status(422).json({ error: "No title." });
+    res.json({ title: text.trim().slice(0, 80) });
   } catch (err) {
     console.error("[equidy] title error:", err);
     res.status(502).json({ error: "Couldn't create a title." });
@@ -68,8 +65,8 @@ app.post("/api/title", requireAuth, async (req, res) => {
 });
 
 app.post("/api/chat", requireAuth, async (req, res) => {
-  if (!client) {
-    res.status(503).json({ error: "Claude is not configured on this server." });
+  if (!hasKey) {
+    res.status(503).json({ error: "OpenAI is not configured on this server." });
     return;
   }
   const { messages, context } = req.body as { messages?: Incoming[]; context?: string };
@@ -90,42 +87,31 @@ app.post("/api/chat", requireAuth, async (req, res) => {
   });
   const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
-  const stream = client.beta.messages.stream({
-    model: MODEL,
-    max_tokens: 16000,
-    thinking: { type: "adaptive" },
-    output_config: { effort: "medium" },
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    system: [
-      { type: "text", text: SYSTEM },
-      { type: "text", text: `PLATFORM CONTEXT\n${String(context ?? "").slice(0, 30_000)}` },
-    ],
-    messages: clean,
-  });
-  res.on("close", () => stream.abort());
+  const abort = new AbortController();
+  res.on("close", () => abort.abort());
 
   try {
-    for await (const event of stream) {
-      if (event.type === "content_block_delta" && event.delta.type === "text_delta") send({ type: "delta", text: event.delta.text });
-    }
-    const final = await stream.finalMessage();
-    if (final.stop_reason === "refusal") {
+    const finish = await streamResponse(
+      {
+        model: MODEL,
+        maxOutputTokens: 16000,
+        effort: "medium",
+        instructions: `${SYSTEM}\n\nPLATFORM CONTEXT\n${String(context ?? "").slice(0, 30_000)}`,
+        input: clean,
+        signal: abort.signal,
+      },
+      (text) => send({ type: "delta", text }),
+    );
+    if (finish === "refusal") {
       send({ type: "delta", text: "\n\n_I can't help with that request. Try rephrasing it as a question about markets, companies or personal finance._" });
-    } else if (final.stop_reason === "max_tokens") {
+    } else if (finish === "max_tokens") {
       send({ type: "delta", text: "\n\n_…response truncated._" });
     }
     send({ type: "done" });
   } catch (err) {
-    if (!res.writableEnded && !stream.controller.signal.aborted) {
+    if (!res.writableEnded && !abort.signal.aborted) {
       console.error("[equidy] chat error:", err);
-      const message =
-        err instanceof Anthropic.RateLimitError ? "Rate limited by the AI provider — please retry in a moment."
-        : err instanceof Anthropic.AuthenticationError ? "The server's Anthropic credentials were rejected."
-        : err instanceof Anthropic.APIConnectionError ? "Could not reach the AI provider."
-        : err instanceof Anthropic.APIError ? `AI provider error (${err.status ?? "unknown"}).`
-        : "Unexpected server error.";
-      send({ type: "error", message });
+      send({ type: "error", message: describeError(err) });
     }
   } finally {
     res.end();
