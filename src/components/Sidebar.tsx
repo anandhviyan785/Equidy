@@ -70,7 +70,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
         )}
       >
         <div className={cn("flex h-14 items-center px-3", isCollapsed ? "justify-center" : "justify-between")}>
-          {!isCollapsed && <button onClick={() => go("/")} className="rounded-lg px-1.5 py-1 hover:bg-elevated"><Logo /></button>}
+          {!isCollapsed && <button onClick={() => go("/")} className="rounded-lg px-1.5 py-1 hover:bg-elevated"><Logo compact /></button>}
           <button className="btn-ghost p-2 max-lg:hidden" onClick={onToggle} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
             {collapsed ? <PanelLeftOpen className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
           </button>

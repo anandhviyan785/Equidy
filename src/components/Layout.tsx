@@ -5,6 +5,7 @@ import { Sidebar } from "./Sidebar";
 import { Logo } from "./ui";
 import { TickerTape } from "./TickerTape";
 import { ConsentBanner } from "./ConsentBanner";
+import { LandingRoute } from "@/pages/LandingRoute";
 import { trackPage } from "@/lib/analytics";
 import { useLiveTicks, useThemeSync } from "@/hooks";
 import { useAuth } from "@/store";
@@ -46,7 +47,7 @@ export function Layout() {
   }, [navigate]);
 
   if (!user) {
-    if (checked) return <Navigate to="/login" replace />;
+    if (checked) return location.pathname === "/" ? <LandingRoute /> : <Navigate to="/login" replace />;
     return <div className="grid h-full place-items-center"><Logo /></div>;
   }
 
@@ -56,7 +57,7 @@ export function Layout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-line px-3 lg:hidden">
           <button className="btn-ghost p-2" onClick={() => setMobileOpen(true)} aria-label="Open menu"><Menu className="h-5 w-5" /></button>
-          <Logo />
+          <Logo compact />
           <button className="btn-ghost p-2" onClick={() => navigate("/")} aria-label="New chat"><SquarePen className="h-5 w-5" /></button>
         </header>
         <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain" id="main">

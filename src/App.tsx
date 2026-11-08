@@ -12,8 +12,10 @@ import { ProfilePage } from "@/pages/ProfilePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { TermsPage } from "@/pages/TermsPage";
+import { LandingRoute } from "@/pages/LandingRoute";
 
 const routes = [
+  { path: "/welcome", element: <LandingRoute /> },
   { path: "/login", element: <LoginPage /> },
   { path: "/privacy", element: <PrivacyPage /> },
   { path: "/terms", element: <TermsPage /> },
