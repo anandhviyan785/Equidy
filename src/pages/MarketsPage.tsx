@@ -47,7 +47,7 @@ export function MarketsPage() {
           const ip = prices[i.symbol];
           const spark = history(i.symbol, i.price, i.vol, i.drift, 1).slice(-30).map((b) => b.close);
           return (
-            <button key={i.symbol} onClick={() => setSel(i.symbol)} className={cn("card p-3.5 text-left transition-colors hover:bg-elevated", sel === i.symbol && "border-accent/50 bg-elevated")}>
+            <button key={i.symbol} onClick={() => setSel(i.symbol)} aria-pressed={sel === i.symbol} className={cn("card p-3.5 text-left transition-colors hover:bg-elevated", sel === i.symbol && "border-accent/50 bg-elevated")}>
               <div className="text-xs text-muted">{i.name}</div>
               <div className="num mt-1 font-semibold">{price(ip.price)}</div>
               <div className="mt-1 flex items-end justify-between">
@@ -127,7 +127,7 @@ export function SecurityTable({ items }: { items: { s: (typeof SECURITIES)[numbe
       <table className="w-full min-w-[680px] text-sm">
         <thead>
           <tr className="border-y border-line bg-elevated/50 text-left text-xs text-muted">
-            <th className="w-10 px-4 py-2.5" />
+            <th className="w-10 px-4 py-2.5"><span className="sr-only">Watchlist</span></th>
             <th className="px-2 py-2.5 font-medium">Symbol</th>
             <th className="px-4 py-2.5 font-medium">Sector</th>
             <th className="px-4 py-2.5 text-right font-medium">Price</th>
@@ -142,7 +142,7 @@ export function SecurityTable({ items }: { items: { s: (typeof SECURITIES)[numbe
             return (
               <tr key={s.symbol} className="border-b border-line last:border-0 hover:bg-elevated/40">
                 <td className="px-4 py-2.5">
-                  <button onClick={() => toggleWatch(s.symbol)} aria-label={watched ? `Remove ${s.symbol} from watchlist` : `Add ${s.symbol} to watchlist`}>
+                  <button className="tap-target block" onClick={() => toggleWatch(s.symbol)} aria-pressed={watched} aria-label={watched ? `Remove ${s.symbol} from watchlist` : `Add ${s.symbol} to watchlist`}>
                     <Star className={cn("h-4 w-4", watched ? "fill-accent text-accent" : "text-muted hover:text-fg")} />
                   </button>
                 </td>

@@ -215,7 +215,7 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); go(); }
         }}
         placeholder={narrow ? "Ask Equidy anything…" : "Ask Equidy about stocks, markets, or your portfolio…"}
-        className={cn("w-full resize-none bg-transparent px-2 leading-relaxed outline-none placeholder:text-muted/70", large ? "min-h-[56px] py-2 text-base" : "self-center py-1.5 text-[15px]")}
+        className={cn("w-full resize-none bg-transparent px-2 leading-relaxed outline-none placeholder:text-muted", large ? "min-h-[56px] py-2 text-base" : "self-center py-1.5 text-[15px]")}
         aria-label="Message Equidy"
       />
       <div className={cn("flex shrink-0 items-center", large && "justify-between pl-1 pt-1")}>

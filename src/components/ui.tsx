@@ -65,10 +65,11 @@ export function Segmented<T extends string>({ value, options, onChange, size = "
           key={o}
           type="button"
           onClick={() => onChange(o)}
+          aria-pressed={value === o}
           className={cn(
             "seg-btn rounded-[10px] font-medium transition-colors",
             size === "sm" ? "px-3 py-1 text-xs" : "px-2 py-0.5 text-[11px]",
-            value === o ? "bg-elevated text-fg" : "text-muted hover:text-fg",
+            value === o ? "bg-fg text-bg" : "text-muted hover:text-fg",
           )}
         >
           {o.charAt(0).toUpperCase() + o.slice(1)}
