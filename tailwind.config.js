@@ -6,8 +6,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["'Times New Roman'", "Times", "'Liberation Serif'", "serif"],
-        mono: ["'Times New Roman'", "Times", "'Liberation Serif'", "serif"],
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["'JetBrains Mono'", "ui-monospace", "monospace"],
       },
       colors: {
         bg: "rgb(var(--bg) / <alpha-value>)",
