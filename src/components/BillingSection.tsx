@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 const ACTIVE = ["active", "trialing", "past_due"];
+const FRIENDLY_ERROR = "We couldn't reach billing. Please try again.";
 
 /** Subscription controls. Renders nothing unless Stripe is configured on the server. */
 export function BillingSection() {
@@ -26,11 +27,12 @@ export function BillingSection() {
     setError(null);
     try {
       const res = await fetch(subscribed ? "/api/billing/portal" : "/api/billing/checkout", { method: "POST", credentials: "same-origin" });
-      const j = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !j.url) throw new Error(j.error || "We couldn't reach billing. Please try again.");
+      const j = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !j.url) throw new Error(j.error || FRIENDLY_ERROR);
+      if (!j.url.startsWith("https://")) throw new Error(FRIENDLY_ERROR);
       window.location.assign(j.url);
     } catch (err) {
-      setError((err as Error).message);
+      setError(err instanceof Error && err.message ? err.message : FRIENDLY_ERROR);
       setBusy(false);
     }
   };

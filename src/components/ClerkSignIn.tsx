@@ -25,6 +25,9 @@ function Bridge({ onError }: { onError: (message: string) => void }) {
         navigate("/", { replace: true });
       } catch (err) {
         onError((err as Error).message);
+        // End the Clerk session so the form comes back and the person can try again.
+        started.current = false;
+        void clerk.signOut().catch(() => { /* the error above is already shown */ });
       }
     })();
   }, [isLoaded, isSignedIn, getToken, clerk, navigate, onError]);
