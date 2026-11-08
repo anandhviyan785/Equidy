@@ -35,8 +35,8 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+        <h1 className="text-[34px] font-bold leading-[1.1] tracking-[-0.022em]">{title}</h1>
+        {subtitle && <p className="mt-1.5 text-[15px] text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -51,7 +51,7 @@ export function Stat({ label, value, sub, className }: { label: string; value: R
   return (
     <div className={cn("card p-4", className)}>
       <div className="label">{label}</div>
-      <div className="num mt-2 text-xl font-semibold tracking-tight">{value}</div>
+      <div className="num mt-2 text-2xl font-semibold tracking-[-0.02em]">{value}</div>
       {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
     </div>
   );
@@ -59,7 +59,7 @@ export function Stat({ label, value, sub, className }: { label: string; value: R
 
 export function Segmented<T extends string>({ value, options, onChange, size = "sm" }: { value: T; options: readonly T[]; onChange: (v: T) => void; size?: "sm" | "xs" }) {
   return (
-    <div className="inline-flex rounded-xl border border-line bg-surface p-0.5">
+    <div className="inline-flex rounded-[10px] bg-elevated p-0.5">
       {options.map((o) => (
         <button
           key={o}
@@ -67,9 +67,9 @@ export function Segmented<T extends string>({ value, options, onChange, size = "
           onClick={() => onChange(o)}
           aria-pressed={value === o}
           className={cn(
-            "seg-btn rounded-[10px] font-medium transition-colors",
-            size === "sm" ? "px-3 py-1 text-xs" : "px-2 py-0.5 text-[11px]",
-            value === o ? "bg-fg text-bg" : "text-muted hover:text-fg",
+            "seg-btn rounded-lg font-medium transition-colors",
+            size === "sm" ? "px-3 py-1 text-[13px]" : "px-2.5 py-0.5 text-xs",
+            value === o ? "bg-[rgb(var(--seg-selected))] text-fg shadow-sm" : "text-muted hover:text-fg",
           )}
         >
           {o.charAt(0).toUpperCase() + o.slice(1)}
@@ -91,8 +91,8 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
-      <div ref={ref} role="dialog" aria-modal className="card relative w-full max-w-md p-5 shadow-2xl animate-fade-up">
+      <div className="absolute inset-0 bg-black/35" onClick={onClose} />
+      <div ref={ref} role="dialog" aria-modal className="card glass relative w-full max-w-md p-5 animate-fade-up">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold">{title}</h2>
           <button className="btn-ghost -mr-2 p-1.5" onClick={onClose} aria-label="Close"><X className="h-4 w-4" /></button>

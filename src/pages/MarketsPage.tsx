@@ -47,7 +47,7 @@ export function MarketsPage() {
           const ip = prices[i.symbol];
           const spark = history(i.symbol, i.price, i.vol, i.drift, 1).slice(-30).map((b) => b.close);
           return (
-            <button key={i.symbol} onClick={() => setSel(i.symbol)} aria-pressed={sel === i.symbol} className={cn("card p-3.5 text-left transition-colors hover:bg-elevated", sel === i.symbol && "border-accent/50 bg-elevated")}>
+            <button key={i.symbol} onClick={() => setSel(i.symbol)} aria-pressed={sel === i.symbol} className={cn("card p-3.5 text-left transition-colors hover:bg-elevated", sel === i.symbol && "border-accent")}>
               <div className="text-xs text-muted">{i.name}</div>
               <div className="num mt-1 font-semibold">{price(ip.price)}</div>
               <div className="mt-1 flex items-end justify-between">
@@ -65,7 +65,7 @@ export function MarketsPage() {
             <div>
               <div className="label">{idx.name}</div>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="num text-2xl font-semibold">{price(p.price)}</span>
+                <span className="num text-[32px] font-semibold leading-tight tracking-[-0.02em]">{price(p.price)}</span>
                 <Change value={series[series.length - 1].close / series[0].close - 1} />
                 <span className="text-xs text-muted">{range}</span>
               </div>
@@ -126,7 +126,7 @@ export function SecurityTable({ items }: { items: { s: (typeof SECURITIES)[numbe
     <div className="overflow-x-auto">
       <table className="w-full min-w-[680px] text-sm">
         <thead>
-          <tr className="border-y border-line bg-elevated/50 text-left text-xs text-muted">
+          <tr className="border-y border-line text-left text-xs text-muted">
             <th className="w-10 px-4 py-2.5"><span className="sr-only">Watchlist</span></th>
             <th className="px-2 py-2.5 font-medium">Symbol</th>
             <th className="px-4 py-2.5 font-medium">Sector</th>

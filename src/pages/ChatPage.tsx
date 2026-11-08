@@ -103,30 +103,33 @@ export function ChatPage() {
         <h2 className="truncate text-sm font-medium">{conv.title}</h2>
         <StatusBadge status={status} />
       </div>
-      <div
-        ref={scroller}
-        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        }}
-      >
-        <div className="mx-auto w-full max-w-3xl space-y-7 px-4 py-8">
-          {conv.messages.map((m) => (
-            <Message
-              key={m.id}
-              m={m}
-              streaming={streamingId === m.id}
-              canRegenerate={!streamingId && m.id === lastAssistant?.id && m.id === conv.messages[conv.messages.length - 1].id}
-              onRegenerate={() => regenerate(conv.id)}
-            />
-          ))}
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={scroller}
+          className="h-full overflow-y-auto overflow-x-hidden overscroll-contain"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+          }}
+        >
+          {/* Bottom padding keeps the last message clear of the floating message box. */}
+          <div className="mx-auto w-full max-w-3xl space-y-7 px-4 pb-44 pt-8">
+            {conv.messages.map((m) => (
+              <Message
+                key={m.id}
+                m={m}
+                streaming={streamingId === m.id}
+                canRegenerate={!streamingId && m.id === lastAssistant?.id && m.id === conv.messages[conv.messages.length - 1].id}
+                onRegenerate={() => regenerate(conv.id)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
-        <div className="mx-auto max-w-3xl">
-          <Composer onSubmit={submit} streaming={!!streamingId} onStop={() => stop(conv.id)} status={status} />
-          <AiDisclaimer />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg from-30% to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-10">
+          <div className="pointer-events-auto mx-auto max-w-3xl">
+            <Composer onSubmit={submit} streaming={!!streamingId} onStop={() => stop(conv.id)} status={status} />
+            <AiDisclaimer />
+          </div>
         </div>
       </div>
     </div>
@@ -205,7 +208,7 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
 
   return (
     // The large (home, desktop) box puts the send button on its own row; the compact box keeps it beside the text.
-    <div className={cn("card relative flex shadow-[0_8px_30px_rgb(0_0_0/0.12)] transition focus-within:border-accent/50", large ? "flex-col p-3" : "items-end gap-1 p-1.5 pl-2")}>
+    <div className={cn("card relative flex shadow-[0_8px_30px_rgb(0_0_0/0.12)] transition focus-within:border-accent/50", large ? "flex-col p-3" : "glass items-end gap-1 p-1.5 pl-2")}>
       <textarea
         ref={ref}
         rows={1}
