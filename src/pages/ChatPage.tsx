@@ -125,7 +125,7 @@ export function ChatPage() {
             ))}
           </div>
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg from-30% to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-10">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg from-[18%] to-transparent to-[42%] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-10">
           <div className="pointer-events-auto mx-auto max-w-3xl">
             <Composer onSubmit={submit} streaming={!!streamingId} onStop={() => stop(conv.id)} status={status} />
             <AiDisclaimer />

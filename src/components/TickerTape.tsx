@@ -8,7 +8,7 @@ export function TickerTape() {
   const prices = useMarket((s) => s.prices);
   const anyLive = useMarket((s) => Object.keys(s.sources).length > 0);
   return (
-    <div className="glass glass-bar sticky top-0 z-20 flex items-center gap-6 overflow-x-auto border-b px-4 py-2 text-xs [scrollbar-width:none]">
+    <div className="glass sticky top-2 z-20 mx-3 mt-2 flex items-center gap-6 overflow-x-auto rounded-full border px-4 py-2 text-xs [scrollbar-width:none]">
       {INDICES.map((i) => {
         const p = prices[i.symbol];
         return (
