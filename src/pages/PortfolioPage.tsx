@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Sparkles, Briefcase, ArrowUpDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Briefcase, ArrowUpDown } from "lucide-react";
 import { BY_SYMBOL, type Security } from "@/data/securities";
 import { useMarket, usePortfolio } from "@/store";
 import { allocationBy, benchmarkHistory, portfolioHistory, positions, summarize, type Holding, type PositionView } from "@/lib/finance";
@@ -49,7 +49,7 @@ export function PortfolioPage() {
         actions={
           <>
             <button className="btn-outline" onClick={() => askEquidy(navigate, "Analyze my investment portfolio")}>
-              <Sparkles className="h-4 w-4 text-accent" /> Analyze with AI
+              Analyze with AI
             </button>
             <button className="btn-primary" onClick={() => setModal({ mode: "add" })}><Plus className="h-4 w-4" /> Add holding</button>
           </>

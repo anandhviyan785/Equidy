@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { useMarket, usePortfolio, useSettings } from "@/store";
 import { allocationBy, benchmarkHistory, correlationMatrix, maxDrawdown, portfolioHistory, positions, riskMetrics } from "@/lib/finance";
 import { returns, type Bar } from "@/lib/market";
@@ -50,7 +50,7 @@ export function StatisticsPage() {
           <>
             <Segmented value={win} options={Object.keys(WINDOWS) as Win[]} onChange={setWin} />
             <button className="btn-outline" onClick={() => askEquidy(navigate, "How risky is my portfolio? Explain my risk metrics and what I could improve.")}>
-              <Sparkles className="h-4 w-4 text-accent" /> Explain my risk
+              Explain my risk
             </button>
           </>
         }

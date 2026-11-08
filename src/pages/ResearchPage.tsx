@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Calculator, Building2, GraduationCap, Sparkles, ArrowRight } from "lucide-react";
+import { Calculator, Building2, GraduationCap, ArrowRight } from "lucide-react";
 import { SECURITIES } from "@/data/securities";
 import { compound } from "@/lib/finance";
 import { money, pct } from "@/lib/format";
@@ -95,7 +95,7 @@ function Companies({ onAsk }: { onAsk: (q: string) => void }) {
                 <td className="num px-4 py-3 text-right">{s.pe?.toFixed(1)}</td>
                 <td className="num px-4 py-3 text-right">{s.financials!.roe}%</td>
                 <td className="px-4 py-3 text-right">
-                  <button className="btn-ghost px-2 py-1 text-xs" onClick={() => onAsk(`Analyze ${s.name}'s financial performance`)}><Sparkles className="h-3.5 w-3.5 text-accent" /> Analyze</button>
+                  <button className="btn-ghost px-2 py-1 text-xs" onClick={() => onAsk(`Analyze ${s.name}'s financial performance`)}>Analyze</button>
                 </td>
               </tr>
             ))}
@@ -135,7 +135,7 @@ function CompoundCalculator({ onAsk }: { onAsk: (q: string) => void }) {
         <Field label="Annual return" value={rate} onChange={setRate} suffix="%" step={0.5} />
         <Field label="Years" value={years} onChange={setYears} suffix="yrs" />
         <button className="btn-outline w-full" onClick={() => onAsk(`If I invest $${principal} plus $${monthly} per month at ${rate}% for ${years} years, how does compound interest grow it?`)}>
-          <Sparkles className="h-4 w-4 text-accent" /> Explain this scenario
+          Explain this scenario
         </button>
       </div>
       <div className="space-y-4 lg:col-span-2">

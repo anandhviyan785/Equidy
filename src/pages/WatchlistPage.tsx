@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Star, Sparkles } from "lucide-react";
+import { Star } from "lucide-react";
 import { BY_SYMBOL } from "@/data/securities";
 import { useMarket, usePortfolio } from "@/store";
 import { Empty, Page, PageHeader } from "@/components/ui";
@@ -21,7 +21,7 @@ export function WatchlistPage() {
         subtitle="Securities you're following, with live prices and trends."
         actions={items.length > 1 && (
           <button className="btn-outline" onClick={() => askEquidy(navigate, `Give me a quick briefing on my watchlist: ${watchlist.join(", ")}. Compare ${watchlist.slice(0, 2).join(" vs ")}.`)}>
-            <Sparkles className="h-4 w-4 text-accent" /> Brief me
+            Brief me
           </button>
         )}
       />

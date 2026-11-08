@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star, Sparkles, Plus } from "lucide-react";
+import { ArrowLeft, Star, Plus } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BY_SYMBOL } from "@/data/securities";
 import { history, intraday, liveDays, sliceRange, RANGES, type Range } from "@/lib/market";
@@ -63,7 +63,7 @@ export function SymbolPage() {
             <Star className={cn("h-4 w-4", watched && "fill-accent text-accent")} /> {watched ? "Watching" : "Watch"}
           </button>
           {!held && <button className="btn-outline" onClick={() => addHolding({ symbol: s.symbol, shares: 1, costBasis: p.price })}><Plus className="h-4 w-4" /> Add 1 share</button>}
-          <button className="btn-primary" onClick={() => askEquidy(navigate, `Analyze ${s.name}'s financial performance`)}><Sparkles className="h-4 w-4" /> Ask Equidy</button>
+          <button className="btn-primary" onClick={() => askEquidy(navigate, `Analyze ${s.name}'s financial performance`)}>Ask Equidy</button>
         </div>
       </div>
 
