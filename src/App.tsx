@@ -9,11 +9,13 @@ import { WatchlistPage } from "@/pages/WatchlistPage";
 import { ResearchPage } from "@/pages/ResearchPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { ProfilePage } from "@/pages/ProfilePage";
+import { LandingPage } from "@/pages/LandingPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { TermsPage } from "@/pages/TermsPage";
 
 const routes = [
+  { path: "/welcome", element: <LandingPage /> },
   { path: "/login", element: <LoginPage /> },
   { path: "/privacy", element: <PrivacyPage /> },
   { path: "/terms", element: <TermsPage /> },

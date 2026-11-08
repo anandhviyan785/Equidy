@@ -23,13 +23,13 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [info, setInfo] = useState<AuthInfo | null>(null);
-  const [mode, setMode] = useState<Mode>("Sign in");
-  const [name, setName] = useState("");
+    const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const urlError = useMemo(() => new URLSearchParams(location.search).get("error"), [location.search]);
+  const [mode, setMode] = useState<Mode>(() => (new URLSearchParams(location.search).get("mode") === "signup" ? "Create account" : "Sign in"));
   const [error, setError] = useState<string | null>(urlError);
 
   useEffect(() => { loadAuth().then(setInfo); }, []);

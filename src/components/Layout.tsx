@@ -12,6 +12,7 @@ import { loadAuth } from "@/lib/auth";
 import { retitleExisting } from "@/lib/chatRunner";
 import { useLiveMarket } from "@/lib/live";
 import { useCloudSync } from "@/lib/sync";
+import { markUsedEquidy, signedOutPath } from "@/lib/visitor";
 
 function readCollapsed() {
   try { return localStorage.getItem("equidy.sidebar") === "1"; } catch { return false; }
@@ -30,6 +31,7 @@ export function Layout() {
   useLiveMarket();
   useCloudSync(user);
   useEffect(() => { void loadAuth(); retitleExisting(); }, []);
+  useEffect(() => { if (user) markUsedEquidy(); }, [user]);
   useEffect(() => { trackPage(location.pathname); }, [location.pathname]);
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export function Layout() {
   }, [navigate]);
 
   if (!user) {
-    if (checked) return <Navigate to="/login" replace />;
+    if (checked) return <Navigate to={signedOutPath()} replace />;
     return <div className="grid h-full place-items-center"><Logo /></div>;
   }
 
