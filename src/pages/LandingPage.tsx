@@ -139,8 +139,8 @@ function Hero({ signedIn }: { signedIn: boolean }) {
       <div className="relative mx-auto max-w-5xl text-center">
         <p className="chip mx-auto" data-reveal>AI-powered finance and investing</p>
         <div className="mt-6 flex items-center justify-center gap-4 sm:gap-6" data-reveal style={delay(60)}>
-          <img src={logoUrl} alt="" className="h-12 w-12 shrink-0 sm:h-20 sm:w-20 lg:h-24 lg:w-24" />
-          <h1 className="max-w-3xl text-balance text-left text-[38px] font-bold leading-[1.05] tracking-[-0.03em] sm:text-6xl lg:text-7xl">Your financial intelligence, reimagined.</h1>
+          <img src={logoUrl} alt="" className="h-9 w-9 shrink-0 sm:h-14 sm:w-14 lg:h-16 lg:w-16" />
+          <h1 className="max-w-3xl text-balance text-center text-[26px] font-normal leading-[1.1] sm:text-5xl lg:max-w-none lg:whitespace-nowrap lg:text-[52px]">Your financial intelligence, reimagined.</h1>
         </div>
         <p className="mx-auto mt-6 max-w-xl text-balance text-base leading-relaxed text-muted sm:text-lg" data-reveal style={delay(120)}>
           Ask anything about companies, markets or personal finance. Equidy analyses your portfolio, explains complex concepts and turns data into clear decisions.
