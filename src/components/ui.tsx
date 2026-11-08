@@ -2,12 +2,12 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { X, TrendingUp, TrendingDown } from "lucide-react";
 import { cn, pct, tone } from "@/lib/format";
 import wordmarkUrl from "@/assets/wordmark.png";
-import markUrl from "@/assets/mark.png";
+import logoUrl from "@/assets/logo-block.png";
 
 export function Logo({ compact = false, className, alt = "Equidy" }: { compact?: boolean; className?: string; alt?: string }) {
   // Assets are white-on-transparent; invert them to black in light mode.
   return compact ? (
-    <img src={markUrl} alt={alt} className={cn("select-none invert dark:invert-0", className ?? "h-7 w-7")} draggable={false} />
+    <img src={logoUrl} alt={alt} className={cn("select-none invert dark:invert-0", className ?? "h-7 w-7")} draggable={false} />
   ) : (
     <img src={wordmarkUrl} alt={alt} className={cn("h-5 w-auto select-none invert dark:invert-0", className)} draggable={false} />
   );

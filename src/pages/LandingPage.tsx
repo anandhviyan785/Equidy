@@ -1,7 +1,7 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, BarChart3, Briefcase, ChevronDown, GraduationCap, MessageSquare, Scale, type LucideIcon } from "lucide-react";
-import markUrl from "@/assets/mark.png";
+import logoUrl from "@/assets/logo-block.png";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { useAuth } from "@/store";
 import { cn } from "@/lib/format";
@@ -62,7 +62,7 @@ function ProductPreview() {
   return (
     <div className="card mx-auto mt-14 max-w-5xl overflow-hidden text-left sm:mt-20" data-reveal style={delay(160)}>
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
-        <img src={markUrl} alt="" className="h-5 w-5" />
+        <img src={logoUrl} alt="" className="h-5 w-5" />
         <span className="chip">Example screen with illustrative numbers</span>
       </div>
       <div className="grid gap-px bg-line md:grid-cols-5">
@@ -116,7 +116,7 @@ function Nav({ signedIn }: { signedIn: boolean }) {
     <header className="sticky top-3 z-40 px-3 pt-3 sm:px-6">
       <nav aria-label="Main" className="glass mx-auto flex max-w-5xl items-center justify-between rounded-full border py-2 pl-4 pr-2">
         <a href="#top" aria-label="Equidy home" className="flex items-center rounded-lg">
-          <img src={markUrl} alt="" className="h-7 w-7" />
+          <img src={logoUrl} alt="" className="h-7 w-7" />
         </a>
         <div className="hidden items-center gap-1 md:flex">
           <a href="#features" className={link}>Features</a>
@@ -139,7 +139,7 @@ function Hero({ signedIn }: { signedIn: boolean }) {
       <div className="relative mx-auto max-w-5xl text-center">
         <p className="chip mx-auto" data-reveal>AI-powered finance and investing</p>
         <div className="mt-6 flex items-center justify-center gap-4 sm:gap-6" data-reveal style={delay(60)}>
-          <img src={markUrl} alt="" className="h-12 w-12 shrink-0 sm:h-20 sm:w-20 lg:h-24 lg:w-24" />
+          <img src={logoUrl} alt="" className="h-12 w-12 shrink-0 sm:h-20 sm:w-20 lg:h-24 lg:w-24" />
           <h1 className="max-w-3xl text-balance text-left text-[38px] font-bold leading-[1.05] tracking-[-0.03em] sm:text-6xl lg:text-7xl">Your financial intelligence, reimagined.</h1>
         </div>
         <p className="mx-auto mt-6 max-w-xl text-balance text-base leading-relaxed text-muted sm:text-lg" data-reveal style={delay(120)}>
@@ -263,7 +263,7 @@ function FinalCall({ signedIn }: { signedIn: boolean }) {
   return (
     <section className="px-4 pb-20 sm:px-6 sm:pb-28">
       <div className="card mx-auto max-w-5xl px-6 py-14 text-center sm:py-20" data-reveal>
-        <img src={markUrl} alt="" className="mx-auto h-12 w-12" />
+        <img src={logoUrl} alt="" className="mx-auto h-12 w-12" />
         <h2 className="mt-6 text-balance text-3xl font-bold tracking-[-0.025em] sm:text-5xl">Start understanding your money.</h2>
         <p className="mx-auto mt-4 max-w-md text-balance text-base text-muted sm:text-lg">Open Equidy and ask your first question.</p>
         <Link to={signedIn ? "/" : "/login"} className="btn-primary mt-8 h-12 px-6 text-base">{signedIn ? "Open Equidy" : "Get started"} <ArrowRight className="h-4 w-4" aria-hidden /></Link>
@@ -277,7 +277,7 @@ function Footer() {
     <footer className="border-t border-line px-4 py-10 sm:px-6">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <img src={markUrl} alt="Equidy" className="h-7 w-7" />
+          <img src={logoUrl} alt="Equidy" className="h-7 w-7" />
           <p className="mt-4 max-w-sm text-xs leading-relaxed text-muted">
             Equidy provides education and analysis, not personalised financial advice. Investing involves risk, including the loss of money.
           </p>
