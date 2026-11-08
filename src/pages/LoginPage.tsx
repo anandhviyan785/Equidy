@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Info, Loader2 } from "lucide-react";
 import { INDICES } from "@/data/securities";
@@ -9,6 +9,9 @@ import { useLiveTicks, useThemeSync } from "@/hooks";
 import { Change, Logo, Segmented } from "@/components/ui";
 import { Sparkline } from "@/components/charts";
 import { cn, price } from "@/lib/format";
+
+const ClerkSignIn = lazy(() => import("@/components/ClerkSignIn"));
+const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
 
 const ORDER: ProviderId[] = ["apple", "google", "microsoft"];
 type Mode = "Sign in" | "Create account";
@@ -32,8 +35,10 @@ export function LoginPage() {
   useEffect(() => { loadAuth().then(setInfo); }, []);
   if (user) return <Navigate to="/" replace />;
 
-  const providers = info ? ORDER.filter((p) => info.providers[p]) : [];
-  const nothingConfigured = info?.online && !info.accounts && providers.length === 0;
+  // Clerk replaces the built-in forms only when both its server and browser keys are set.
+  const clerkOn = !!info?.clerk && !!CLERK_KEY;
+  const providers = info && !clerkOn ? ORDER.filter((p) => info.providers[p]) : [];
+  const nothingConfigured = info?.online && !clerkOn && !info.accounts && providers.length === 0;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -65,7 +70,13 @@ export function LoginPage() {
 
           {!info && <div className="mt-10 flex justify-center text-muted"><Loader2 className="h-5 w-5 animate-spin" /></div>}
 
-          {info?.accounts && (
+          {clerkOn && (
+            <Suspense fallback={<div className="mt-10 flex justify-center text-muted"><Loader2 className="h-5 w-5 animate-spin" /></div>}>
+              <ClerkSignIn publishableKey={CLERK_KEY as string} onError={setError} />
+            </Suspense>
+          )}
+
+          {!clerkOn && info?.accounts && (
             <form onSubmit={submit} className="mt-7 space-y-3" noValidate>
               <Segmented value={mode} options={["Sign in", "Create account"] as const} onChange={(m) => { setMode(m); setError(null); }} />
               {mode === "Create account" && (

@@ -1,10 +1,12 @@
 import { useAuth, useChats, usePortfolio, useSettings, type AuthUser, type ProviderId } from "@/store";
+import { shouldAdoptLocalData } from "./adopt";
 
 export type Providers = Record<ProviderId, boolean>;
 
 export interface AuthInfo {
   online: boolean; // auth server reachable
   accounts: boolean; // email + password accounts available
+  clerk: boolean; // Clerk sign-in available on the server
   providers: Providers;
 }
 
@@ -15,13 +17,13 @@ let infoPromise: Promise<AuthInfo> | null = null;
 export function loadAuth(): Promise<AuthInfo> {
   infoPromise ??= fetch("/api/auth/session", { credentials: "same-origin", signal: AbortSignal.timeout(5000) })
     .then((r) => (r.ok ? r.json() : Promise.reject()))
-    .then((j: { user: AuthUser | null; providers: Providers; accounts?: boolean }) => {
+    .then((j: { user: AuthUser | null; providers: Providers; accounts?: boolean; clerk?: boolean }) => {
       // When the server is reachable, only a real server session counts.
       if (j.user) signIn(j.user);
       else useAuth.getState().setUser(null);
-      return { online: true, accounts: !!j.accounts, providers: j.providers };
+      return { online: true, accounts: !!j.accounts, clerk: !!j.clerk, providers: j.providers };
     })
-    .catch(() => ({ online: false, accounts: false, providers: NONE }))
+    .catch(() => ({ online: false, accounts: false, clerk: false, providers: NONE }))
     .finally(() => useAuth.getState().setChecked(true));
   return infoPromise;
 }
@@ -29,8 +31,12 @@ export function loadAuth(): Promise<AuthInfo> {
 function signIn(user: AuthUser) {
   // Each account keeps its own portfolio and chats on this browser.
   const prevOwner = usePortfolio.getState().owner;
-  if (prevOwner && prevOwner !== user.id) useChats.getState().clearAll();
-  usePortfolio.getState().claim(user.id);
+  if (shouldAdoptLocalData(prevOwner, user, useSettings.getState().profile.email)) {
+    usePortfolio.setState({ owner: user.id });
+  } else {
+    if (prevOwner && prevOwner !== user.id) useChats.getState().clearAll();
+    usePortfolio.getState().claim(user.id);
+  }
   useAuth.getState().setUser(user);
   const s = useSettings.getState();
   s.set({ profile: { ...s.profile, name: user.name, email: user.email ?? s.profile.email } });
@@ -61,13 +67,22 @@ export async function signInWithEmail(email: string, password: string) {
   signIn(await post("/api/auth/signin", { email, password }));
 }
 
+export async function signInWithClerk(token: string) {
+  signIn(await post("/api/auth/clerk", { token }));
+}
+
+/** A Clerk session outlives Equidy's cookie, so the login page ends it too. */
+function endClerkSession(wasClerk: boolean) {
+  if (wasClerk) window.location.assign("/login?signout=1");
+}
+
 /** Starts the real OAuth redirect. */
 export function startOAuth(p: ProviderId) {
   window.location.href = `/api/auth/${p}/start`;
 }
 
-const PROVIDER_LABEL: Record<ProviderId | "email", string> = { google: "Google", microsoft: "Microsoft", apple: "Apple", email: "email" };
-export const providerLabel = (p: ProviderId | "email") => PROVIDER_LABEL[p];
+const PROVIDER_LABEL: Record<ProviderId | "email" | "clerk", string> = { google: "Google", microsoft: "Microsoft", apple: "Apple", email: "email", clerk: "your account" };
+export const providerLabel = (p: ProviderId | "email" | "clerk") => PROVIDER_LABEL[p];
 
 /** Local demo account, only offered when no Equidy server is reachable (e.g. the static preview). */
 export function demoSignIn() {
@@ -75,14 +90,17 @@ export function demoSignIn() {
 }
 
 export async function signOut() {
+  const wasClerk = useAuth.getState().user?.provider === "clerk";
   try {
     await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
   } catch { /* server unreachable: local sign-out still applies */ }
   useAuth.getState().setUser(null);
+  endClerkSession(wasClerk);
 }
 
 /** Permanently deletes the account and clears this browser's Equidy data. */
 export async function deleteAccount() {
+  const wasClerk = useAuth.getState().user?.provider === "clerk";
   const res = await fetch("/api/auth/delete", { method: "POST", credentials: "same-origin" }).catch(() => null);
   if (res && !res.ok && res.status !== 401) {
     const j = (await res.json().catch(() => ({}))) as { error?: string };
@@ -91,4 +109,5 @@ export async function deleteAccount() {
   usePortfolio.setState({ holdings: [], owner: null });
   useChats.getState().clearAll();
   useAuth.getState().setUser(null);
+  endClerkSession(wasClerk);
 }

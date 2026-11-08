@@ -4,6 +4,8 @@ import { Menu, SquarePen } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { Logo } from "./ui";
 import { TickerTape } from "./TickerTape";
+import { ConsentBanner } from "./ConsentBanner";
+import { trackPage } from "@/lib/analytics";
 import { useLiveTicks, useThemeSync } from "@/hooks";
 import { useAuth } from "@/store";
 import { loadAuth } from "@/lib/auth";
@@ -28,6 +30,7 @@ export function Layout() {
   useLiveMarket();
   useCloudSync(user);
   useEffect(() => { void loadAuth(); retitleExisting(); }, []);
+  useEffect(() => { trackPage(location.pathname); }, [location.pathname]);
 
   useEffect(() => {
     try { localStorage.setItem("equidy.sidebar", collapsed ? "1" : "0"); } catch { /* storage unavailable */ }
@@ -61,6 +64,7 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+      <ConsentBanner />
     </div>
   );
 }

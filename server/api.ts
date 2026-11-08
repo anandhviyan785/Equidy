@@ -4,6 +4,7 @@ import { getCompanyIntel, getMarketNews, intelEnabled } from "./finnhub.js";
 import { getHistory, getQuotes, isSymbol, marketStatus } from "./market.js";
 import { DataError, loadUserData, parseUserData, saveUserData, syncEnabled } from "./userdata.js";
 import { rateLimit, AccountError } from "./accounts.js";
+import { reportError } from "./monitoring.js";
 
 // REST routes for market data (Alpha Vantage/Finnhub), intelligence (Finnhub) and cloud sync (Postgres).
 
@@ -21,21 +22,24 @@ function handle(fn: (req: Request, res: Response) => Promise<unknown>) {
       if (!res.headersSent) res.json(out);
     } catch (err) {
       const status = err instanceof DataError || err instanceof AccountError ? err.status : 500;
-      if (status >= 500) console.error(`[equidy] ${req.method} ${req.originalUrl}:`, err);
+      if (status >= 500) {
+        console.error(`[equidy] ${req.method} ${req.originalUrl}:`, err);
+        await reportError(err, `${req.method} ${req.baseUrl}${String(req.route?.path ?? "")}`);
+      }
       if (!res.headersSent) res.status(status).json({ error: status >= 500 ? "Something went wrong on our side. Please try again." : (err as Error).message });
     }
   };
 }
 
 /** Per-visitor throttle for endpoints that spend third-party quota. */
-function throttle(name: string, max: number, windowMs = 60_000) {
-  return (req: Request, res: Response, next: () => void) => {
+export function throttle(name: string, max: number, windowMs = 60_000) {
+  return async (req: Request, res: Response, next: () => void) => {
     try {
-      rateLimit(`${name}:${readSession(req)?.id ?? req.ip}`, max, windowMs);
-      next();
+      await rateLimit(`${name}:${readSession(req)?.id ?? req.ip}`, max, windowMs);
     } catch (err) {
-      res.status(429).json({ error: (err as Error).message });
+      return void res.status(429).json({ error: (err as Error).message });
     }
+    next();
   };
 }
 

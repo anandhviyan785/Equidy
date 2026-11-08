@@ -1,9 +1,12 @@
-import express from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import { authRouter, requireAuth } from "./auth.js";
 import { describeError, generate, hasGeminiKey, streamGenerate } from "./gemini.js";
-import { apiRouter, servicesStatus } from "./api.js";
+import { apiRouter, servicesStatus, throttle } from "./api.js";
+import { billingRouter, billingWebhook } from "./billing.js";
 import { getCompanyIntel, getMarketNews, intelToText } from "./finnhub.js";
 import { isSymbol } from "./market.js";
+import { reportError } from "./monitoring.js";
+import { relevantHeadlines } from "./vector.js";
 
 export const MODEL = process.env.EQUIDY_MODEL ?? "gemini-3.6-flash";
 export const hasKey = hasGeminiKey();
@@ -31,8 +34,10 @@ Guidelines:
 // The Express app is shared by the long-running server (server/index.ts) and the Vercel function (api/index.ts).
 export const app = express();
 app.set("trust proxy", 1); // behind Vercel/Render proxies: req.ip is the visitor, not the proxy
+app.post("/api/billing/webhook", express.raw({ type: "*/*", limit: "1mb" }), billingWebhook); // needs the raw body
 app.use(express.json({ limit: "4mb" }));
 app.use("/api/auth", authRouter);
+app.use("/api/billing", billingRouter);
 app.use("/api", apiRouter);
 
 app.get("/api/health", (_req, res) => {
@@ -42,7 +47,7 @@ app.get("/api/health", (_req, res) => {
 type Incoming = { role: "user" | "assistant"; content: string };
 
 // Short summary title for a conversation, shown in the sidebar.
-app.post("/api/title", requireAuth, async (req, res) => {
+app.post("/api/title", requireAuth, throttle("title", 30), async (req, res) => {
   if (!hasKey) return void res.status(503).json({ error: "Gemini is not configured on this server." });
   const { messages } = req.body as { messages?: Incoming[] };
   const transcript = (messages ?? [])
@@ -69,7 +74,7 @@ app.post("/api/title", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/chat", requireAuth, async (req, res) => {
+app.post("/api/chat", requireAuth, throttle("chat", 20), async (req, res) => {
   if (!hasKey) {
     res.status(503).json({ error: "Gemini is not configured on this server." });
     return;
@@ -92,7 +97,7 @@ app.post("/api/chat", requireAuth, async (req, res) => {
   });
   const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
-  const intel = await intelContext(symbols);
+  const intel = await intelContext(symbols, clean[clean.length - 1].content);
   const abort = new AbortController();
   res.on("close", () => abort.abort());
 
@@ -116,6 +121,7 @@ app.post("/api/chat", requireAuth, async (req, res) => {
   } catch (err) {
     if (!res.writableEnded && !abort.signal.aborted) {
       console.error("[equidy] chat error:", err);
+      await reportError(err, "POST /api/chat");
       send({ type: "error", message: describeError(err) });
     }
   } finally {
@@ -123,14 +129,27 @@ app.post("/api/chat", requireAuth, async (req, res) => {
   }
 });
 
+// Last-resort handler for errors no route caught, including malformed request bodies.
+app.use(async (err: Error & { status?: number }, req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) return next(err);
+  const status = err.status && err.status >= 400 ? err.status : 500;
+  if (status >= 500) {
+    console.error(`[equidy] ${req.method} ${req.path}:`, err);
+    await reportError(err, `${req.method} ${req.path}`);
+  }
+  res.status(status).json({ error: status >= 500 ? "Something went wrong on our side. Please try again." : "That request couldn't be processed." });
+});
+
 /** Finnhub intelligence for the companies the user mentioned, plus today's market headlines. */
-async function intelContext(raw: unknown): Promise<string> {
+async function intelContext(raw: unknown, question: string): Promise<string> {
   const symbols = (Array.isArray(raw) ? raw : []).map((s) => String(s).toUpperCase()).filter(isSymbol).slice(0, 3);
   try {
     const [news, ...companies] = await Promise.all([getMarketNews(), ...symbols.map((s) => getCompanyIntel(s))]);
     const parts: string[] = [];
     const found = companies.filter((c): c is NonNullable<typeof c> => !!c);
     if (found.length) parts.push(`FINNHUB INTELLIGENCE\n${found.map(intelToText).join("\n\n")}`);
+    const relevant = news?.length ? await relevantHeadlines(question, news) : "";
+    if (relevant) parts.push(relevant);
     if (news?.length) parts.push(`MARKET HEADLINES (Finnhub)\n${news.slice(0, 6).map((n) => `- ${n.headline} (${n.source}, ${new Date(n.datetime).toISOString().slice(0, 10)})`).join("\n")}`);
     return parts.length ? `\n\n${parts.join("\n\n")}`.slice(0, 12_000) : "";
   } catch (err) {

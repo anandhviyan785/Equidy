@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { promisify } from "node:util";
 import { db, dbEnabled } from "./db.js";
+import { redis, withRedisTimeout } from "./redis.js";
 
 // Email + password accounts stored in Postgres (e.g. Neon, added from Vercel → Storage).
 // Enabled when DATABASE_URL (or POSTGRES_URL, set by Vercel's Postgres integrations) is present.
@@ -90,16 +91,44 @@ export async function verifyAccount(input: { email?: string; password?: string }
   return { id: rows[0].id, email: rows[0].email, name: rows[0].name };
 }
 
-// Best-effort brute-force protection (per server instance).
+const TOO_MANY = "Too many attempts. Please wait a few minutes and try again.";
+
+// Per-instance fallback, used when Redis isn't configured or doesn't answer.
 const attempts = new Map<string, { n: number; reset: number }>();
-export function rateLimit(key: string, max = 10, windowMs = 10 * 60_000) {
+const MAX_TRACKED_KEYS = 10_000;
+
+function rateLimitInMemory(key: string, max: number, windowMs: number) {
   const now = Date.now();
   const a = attempts.get(key);
   if (!a || a.reset < now) {
+    if (attempts.size >= MAX_TRACKED_KEYS) attempts.delete(attempts.keys().next().value as string);
     attempts.set(key, { n: 1, reset: now + windowMs });
     return;
   }
-  if (++a.n > max) throw new AccountError("Too many attempts. Please wait a few minutes and try again.", 429);
+  if (++a.n > max) throw new AccountError(TOO_MANY, 429);
+}
+
+/** Fixed-window limit shared across instances through Redis. Keys are hashed so no IP or user ID is stored. */
+export async function rateLimit(key: string, max = 10, windowMs = 10 * 60_000): Promise<void> {
+  const client = redis();
+  if (client) {
+    let count: number | null = null;
+    try {
+      const hashed = `rl:${crypto.createHash("sha256").update(key).digest("hex")}`;
+      const pipeline = client.pipeline();
+      pipeline.incr(hashed);
+      pipeline.pexpire(hashed, windowMs, "NX");
+      const [n] = await withRedisTimeout(pipeline.exec<[number, number]>());
+      count = n;
+    } catch (err) {
+      console.warn("[equidy] shared rate limit unavailable:", (err as Error).message);
+    }
+    if (count !== null) {
+      if (count > max) throw new AccountError(TOO_MANY, 429);
+      return;
+    }
+  }
+  rateLimitInMemory(key, max, windowMs);
 }
 
 /** Permanently removes an email account. */

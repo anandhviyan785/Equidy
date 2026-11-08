@@ -5,7 +5,7 @@ import { useThemeSync } from "@/hooks";
 
 // Contact address shown in the policy. App Store and Google Play reviewers check that it works.
 export const PRIVACY_CONTACT = "privacy@equidy.website";
-const UPDATED = "4 November 2026";
+const UPDATED = "8 November 2026";
 
 export function PrivacyPage() {
   useThemeSync();
@@ -36,12 +36,20 @@ export function PrivacyPage() {
             <li>To answer your questions and personalise the assistant, for example by greeting you by name.</li>
             <li>To protect the service against abuse, such as repeated failed sign-ins.</li>
           </ul>
-          <p>We do not sell your personal information, show advertising, or use third-party tracking or analytics.</p>
+          <p>We do not sell your personal information or show advertising. Usage analytics run only if you allow them, count page views only, and never include your portfolio or chats. You can change your choice in Settings.</p>
 
           <h2>Who we share it with</h2>
+          <p>We use only the providers needed for the features that are switched on:</p>
           <ul>
             <li><strong>Vercel</strong>, which hosts the service.</li>
-            <li><strong>Neon</strong>, which hosts the database where your account and saved data are stored.</li>
+            <li><strong>Neon or Supabase</strong>, which host the database where your account and saved data are stored.</li>
+            <li><strong>Clerk</strong>, which handles sign-in: your name, email address and sign-in details.</li>
+            <li><strong>Stripe</strong>, which processes subscriptions. Your payment details go directly to Stripe and we never see your full card number.</li>
+            <li><strong>Resend</strong>, which delivers account emails: your name and email address.</li>
+            <li><strong>Sentry</strong>, which records technical error reports. We remove your identity, chats and portfolio before they are sent.</li>
+            <li><strong>PostHog</strong>, which counts page views, only if you allow it.</li>
+            <li><strong>Upstash</strong>, which stores shared market data and anonymised request counts used to prevent abuse.</li>
+            <li><strong>Pinecone</strong>, which stores public news headlines used to find relevant news. Your questions are not stored there.</li>
             <li><strong>Google</strong>, which provides the AI assistant (Gemini), for the messages described above.</li>
             <li><strong>Alpha Vantage and Finnhub</strong>, which supply market data. We request prices and news by ticker symbol only; no personal information is sent to them.</li>
             <li><strong>Google, Microsoft or Apple</strong>, only if you choose to sign in with them.</li>

@@ -4,6 +4,10 @@ import { Apple, Google, MicrosoftEntraId, OAuth2RequestError, decodeIdToken, gen
 import { AccountError, accountsEnabled, createAccount, deleteAccount, rateLimit, verifyAccount } from "./accounts.js";
 import { appUrl, getEnv } from "./env.js";
 import { deleteUserData } from "./userdata.js";
+import { cancelBillingFor } from "./billing.js";
+import { clerkEnabled, deleteClerkUser, verifyClerkUser } from "./clerk.js";
+import { sendWelcomeEmail } from "./email.js";
+import { reportError } from "./monitoring.js";
 
 // Sign-in: email + password accounts (stored in Postgres, see accounts.ts) and OAuth with
 // Google, Microsoft (Entra ID) and Apple. Each OAuth provider is enabled when its credentials are set.
@@ -11,8 +15,8 @@ import { deleteUserData } from "./userdata.js";
 export type ProviderId = "google" | "microsoft" | "apple";
 
 export interface SessionUser {
-  id: string; // "email:<id>" or "<provider>:<subject>"
-  provider: ProviderId | "email";
+  id: string; // "email:<id>", "clerk:<id>" or "<provider>:<subject>"
+  provider: ProviderId | "email" | "clerk";
   name: string;
   email: string | null;
   avatar: string | null;
@@ -48,7 +52,7 @@ export async function getProviders(): Promise<Record<ProviderId, boolean>> {
   return directProviders;
 }
 
-export const authEnabled = () => accountsEnabled() || Object.values(directProviders).some(Boolean);
+export const authEnabled = () => accountsEnabled() || clerkEnabled() || Object.values(directProviders).some(Boolean);
 
 // ---------------- cookies & signed sessions ----------------
 
@@ -122,7 +126,7 @@ export const authRouter = express.Router();
 authRouter.use(express.urlencoded({ extended: false })); // Apple posts its callback as a form
 
 authRouter.get("/session", async (req, res) => {
-  res.json({ user: readSession(req), providers: await getProviders(), accounts: accountsEnabled() });
+  res.json({ user: readSession(req), providers: await getProviders(), accounts: accountsEnabled(), clerk: clerkEnabled() });
 });
 
 authRouter.post("/logout", (_req, res) => {
@@ -137,15 +141,17 @@ function startSession(res: Response, user: SessionUser) {
 function accountRoute(action: "signup" | "signin") {
   return async (req: Request, res: Response) => {
     try {
-      rateLimit(`${action}:${req.ip}`);
+      await rateLimit(`${action}:${req.ip}`);
       const body = (req.body ?? {}) as { name?: string; email?: string; password?: string };
       const acct = action === "signup" ? await createAccount(body) : await verifyAccount(body);
       const user: SessionUser = { id: `email:${acct.id}`, provider: "email", name: acct.name, email: acct.email, avatar: null };
       startSession(res, user);
+      if (action === "signup") await sendWelcomeEmail(acct.email, acct.name);
       res.json({ user });
     } catch (err) {
       if (err instanceof AccountError) return void res.status(err.status).json({ error: err.message });
       console.error(`[equidy] ${action} failed:`, err);
+      await reportError(err, `POST /api/auth/${action}`);
       res.status(500).json({ error: "Something went wrong on our side. Please try again." });
     }
   };
@@ -154,17 +160,41 @@ function accountRoute(action: "signup" | "signin") {
 authRouter.post("/signup", express.json(), accountRoute("signup"));
 authRouter.post("/signin", express.json(), accountRoute("signin"));
 
+// Exchanges a verified Clerk token for Equidy's normal session cookie.
+authRouter.post("/clerk", express.json(), async (req, res) => {
+  if (!clerkEnabled()) return void res.status(404).json({ error: "That sign-in method isn't available." });
+  try {
+    await rateLimit(`clerk:${req.ip}`, 30);
+  } catch (err) {
+    return void res.status(429).json({ error: (err as Error).message });
+  }
+  const token = (req.body as { token?: unknown } | undefined)?.token;
+  if (typeof token !== "string" || !token) return void res.status(400).json({ error: "Sign-in failed. Please try again." });
+  try {
+    const { user, isNew } = await verifyClerkUser(token);
+    startSession(res, user);
+    if (isNew && user.email) await sendWelcomeEmail(user.email, user.name);
+    res.json({ user });
+  } catch (err) {
+    console.warn("[equidy] Clerk sign-in rejected:", (err as Error).message);
+    res.status(401).json({ error: "We couldn't complete sign-in. Please try again." });
+  }
+});
+
 // Account deletion (required by the App Store and Google Play for apps with sign-up).
 authRouter.post("/delete", async (req, res) => {
   const user = readSession(req);
   if (!user) return void res.status(401).json({ error: "Please sign in to continue." });
   try {
+    await cancelBillingFor(user.id);
     await deleteUserData(user.id);
     if (user.provider === "email") await deleteAccount(user.id.replace(/^email:/, ""));
+    if (user.provider === "clerk") await deleteClerkUser(user.id.replace(/^clerk:/, ""));
     setCookie(res, SESSION_COOKIE, "", { maxAge: 0 });
     res.json({ ok: true });
   } catch (err) {
     console.error("[equidy] account deletion failed:", err);
+    await reportError(err, "POST /api/auth/delete");
     const status = err instanceof AccountError ? err.status : 500;
     res.status(status).json({ error: err instanceof AccountError ? err.message : "We couldn't delete your account. Please try again." });
   }

@@ -1,7 +1,8 @@
 import { db, dbEnabled, ensureSchema } from "./db.js";
+import { redis, withRedisTimeout } from "./redis.js";
 
-// Two-level cache for third-party API responses: in-memory per server instance, plus (optionally)
-// the equidy_market_cache table in Postgres so serverless instances share results. This matters for
+// Layered cache for third-party API responses: in-memory per server instance, plus (optionally)
+// Upstash Redis and the equidy_market_cache table in Postgres so serverless instances share results. This matters for
 // Alpha Vantage, whose free tier allows only 25 requests a day.
 
 const memory = new Map<string, { at: number; value: unknown }>();
@@ -24,7 +25,33 @@ function remember(key: string, value: unknown, at = Date.now()) {
   memory.set(key, { at, value });
 }
 
+async function readRedis<T>(key: string, ttlMs: number): Promise<T | undefined> {
+  const client = redis();
+  if (!client) return undefined;
+  try {
+    const hit = await withRedisTimeout(client.get<{ at: number; value: T }>(`cache:${key}`));
+    if (!hit || !(Date.now() - hit.at < ttlMs)) return undefined;
+    remember(key, hit.value, hit.at);
+    return hit.value;
+  } catch (err) {
+    console.warn("[equidy] shared cache read failed:", (err as Error).message);
+    return undefined;
+  }
+}
+
+async function writeRedis(key: string, value: unknown, ttlMs: number) {
+  const client = redis();
+  if (!client) return;
+  try {
+    await withRedisTimeout(client.set(`cache:${key}`, { at: Date.now(), value }, { ex: Math.max(1, Math.ceil(ttlMs / 1000)) }));
+  } catch (err) {
+    console.warn("[equidy] shared cache write failed:", (err as Error).message);
+  }
+}
+
 async function readPersisted<T>(key: string, ttlMs: number): Promise<T | undefined> {
+  const shared = await readRedis<T>(key, ttlMs);
+  if (shared !== undefined) return shared;
   if (!dbEnabled()) return undefined;
   try {
     await ensureSchema();
@@ -40,7 +67,8 @@ async function readPersisted<T>(key: string, ttlMs: number): Promise<T | undefin
   }
 }
 
-async function writePersisted(key: string, value: unknown) {
+async function writePersisted(key: string, value: unknown, ttlMs: number) {
+  await writeRedis(key, value, ttlMs);
   if (!dbEnabled()) return;
   try {
     await ensureSchema();
@@ -69,7 +97,7 @@ export async function cached<T>(key: string, ttlMs: number, loader: () => Promis
     const value = await loader();
     // Misses expire after NEGATIVE_TTL_MS whatever ttlMs is, so a rate-limited provider is retried soon.
     remember(key, value, value === null ? Date.now() - Math.max(0, ttlMs - NEGATIVE_TTL_MS) : Date.now());
-    if (value !== null && opts.persist) await writePersisted(key, value);
+    if (value !== null && opts.persist) await writePersisted(key, value, ttlMs);
     return value;
   })().finally(() => inflight.delete(key));
   inflight.set(key, run);

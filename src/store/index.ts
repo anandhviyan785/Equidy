@@ -247,7 +247,7 @@ export type ProviderId = "google" | "microsoft" | "apple";
 
 export interface AuthUser {
   id: string;
-  provider: ProviderId | "email";
+  provider: ProviderId | "email" | "clerk";
   name: string;
   email: string | null;
   avatar: string | null;

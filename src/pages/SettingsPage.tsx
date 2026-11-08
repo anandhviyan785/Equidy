@@ -4,6 +4,8 @@ import { useChats, usePortfolio, useSettings, type Theme } from "@/store";
 import { aiStatus, type AIStatus, type Services } from "@/lib/ai";
 import { cn } from "@/lib/format";
 import { Page, PageHeader, Segmented, Toggle } from "@/components/ui";
+import { BillingSection } from "@/components/BillingSection";
+import { analyticsAvailable, getConsent, setConsent } from "@/lib/analytics";
 
 function Section({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
   return (
@@ -33,6 +35,7 @@ export function SettingsPage() {
   const clearChats = useChats((c) => c.clearAll);
   const [status, setStatus] = useState<AIStatus | null>(null);
   const [confirm, setConfirm] = useState<null | "chats" | "portfolio">(null);
+  const [usage, setUsage] = useState(() => getConsent() === "yes");
   useEffect(() => { aiStatus().then(setStatus); }, []);
 
   const exportData = () => {
@@ -95,6 +98,16 @@ export function SettingsPage() {
             </Row>
           ))}
         </Section>
+
+        <BillingSection />
+
+        {analyticsAvailable() && (
+          <Section title="Privacy">
+            <Row label="Usage analytics" hint="Counts which pages are used. Never includes your portfolio or chats.">
+              <Toggle checked={usage} onChange={(on) => { setUsage(on); setConsent(on ? "yes" : "no"); }} label="Usage analytics" />
+            </Row>
+          </Section>
+        )}
 
         <Section title="Analytics">
           <Row label="Risk-free rate" hint="Used for Sharpe, Sortino and alpha.">
