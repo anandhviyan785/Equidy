@@ -4,3 +4,4 @@ dist-single
 .env
 *.tsbuildinfo
 .vercel
+.data

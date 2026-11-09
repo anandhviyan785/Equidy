@@ -2,11 +2,13 @@ import crypto from "node:crypto";
 import { promisify } from "node:util";
 import { db, dbEnabled } from "./db.js";
 import { redis, withRedisTimeout } from "./redis.js";
+import { devAccountsEnabled, devDelete, devFindByEmail, devInsert } from "./devAccounts.js";
 
 // Email + password accounts stored in Postgres (e.g. Neon, added from Vercel → Storage).
 // Enabled when DATABASE_URL (or POSTGRES_URL, set by Vercel's Postgres integrations) is present.
+// For local development only, EQUIDY_DEV_ACCOUNTS=1 stores accounts in .data/accounts.json instead (see devAccounts.ts).
 
-export const accountsEnabled = () => dbEnabled();
+export const accountsEnabled = () => dbEnabled() || devAccountsEnabled();
 
 const scrypt = promisify(crypto.scrypt) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 
@@ -63,12 +65,17 @@ export function validate(input: { name?: string; email?: string; password?: stri
 }
 
 export async function createAccount(input: { name?: string; email?: string; password?: string }): Promise<Account> {
-  if (!dbEnabled()) throw new AccountError("Accounts aren't set up on this server yet.", 503);
+  if (!accountsEnabled()) throw new AccountError("Accounts aren't set up on this server yet.", 503);
   const { email, password, name } = validate(input, true);
-  await ensureTable();
-  const sql = db();
   const id = crypto.randomUUID();
   const hash = await hashPassword(password);
+  if (!dbEnabled()) {
+    const stored = await devInsert({ id, email, name, password_hash: hash });
+    if (!stored) throw new AccountError("An account with this email already exists. Sign in instead.", 409);
+    return { id, email, name };
+  }
+  await ensureTable();
+  const sql = db();
   const rows = (await sql`
     INSERT INTO equidy_users (id, email, name, password_hash) VALUES (${id}, ${email}, ${name}, ${hash})
     ON CONFLICT (email) DO NOTHING
@@ -80,12 +87,19 @@ export async function createAccount(input: { name?: string; email?: string; pass
 // Used when the email is unknown, so the response takes as long as a real check.
 const DUMMY_HASH = `scrypt:${Buffer.alloc(16).toString("base64")}:${Buffer.alloc(64).toString("base64")}`;
 
-export async function verifyAccount(input: { email?: string; password?: string }): Promise<Account> {
-  if (!dbEnabled()) throw new AccountError("Accounts aren't set up on this server yet.", 503);
-  const { email, password } = validate(input, false);
+async function findByEmail(email: string): Promise<(Account & { password_hash: string })[]> {
+  if (!dbEnabled()) {
+    const found = await devFindByEmail(email);
+    return found ? [found] : [];
+  }
   await ensureTable();
-  const sql = db();
-  const rows = (await sql`SELECT id, email, name, password_hash FROM equidy_users WHERE email = ${email}`) as (Account & { password_hash: string })[];
+  return (await db()`SELECT id, email, name, password_hash FROM equidy_users WHERE email = ${email}`) as (Account & { password_hash: string })[];
+}
+
+export async function verifyAccount(input: { email?: string; password?: string }): Promise<Account> {
+  if (!accountsEnabled()) throw new AccountError("Accounts aren't set up on this server yet.", 503);
+  const { email, password } = validate(input, false);
+  const rows = await findByEmail(email);
   const ok = await verifyPassword(password, rows[0]?.password_hash ?? DUMMY_HASH);
   if (!rows.length || !ok) throw new AccountError("Incorrect email or password.", 401);
   return { id: rows[0].id, email: rows[0].email, name: rows[0].name };
@@ -133,7 +147,7 @@ export async function rateLimit(key: string, max = 10, windowMs = 10 * 60_000): 
 
 /** Permanently removes an email account. */
 export async function deleteAccount(id: string) {
-  if (!dbEnabled()) return;
+  if (!dbEnabled()) return void (devAccountsEnabled() && (await devDelete(id)));
   await ensureTable();
   await db()`DELETE FROM equidy_users WHERE id = ${id}`;
 }

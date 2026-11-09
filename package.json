@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Equidy — AI-powered financial intelligence platform",
   "scripts": {
-    "dev": "concurrently -k -n web,api -c green,gray \"vite\" \"tsx watch server/index.ts\"",
+    "dev": "EQUIDY_DEV_ACCOUNTS=1 concurrently -k -n web,api -c green,gray \"vite\" \"tsx watch server/index.ts\"",
     "dev:web": "vite",
     "dev:api": "tsx watch server/index.ts",
     "build": "vite build",
