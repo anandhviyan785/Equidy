@@ -114,7 +114,7 @@ function Nav({ signedIn }: { signedIn: boolean }) {
   const link = "rounded-full px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg";
   return (
     <header className="sticky top-3 z-40 px-3 pt-3 sm:px-6">
-      <nav aria-label="Main" className="glass mx-auto flex max-w-5xl items-center justify-between rounded-full border py-2 pl-4 pr-2">
+      <nav aria-label="Main" className="floating mx-auto border-line bg-surface flex max-w-5xl items-center justify-between rounded-full border py-2 pl-4 pr-2">
         <a href="#top" aria-label="Equidy home" className="flex items-center rounded-lg">
           <img src={logoUrl} alt="" className="h-7 w-7" />
         </a>
