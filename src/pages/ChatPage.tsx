@@ -73,7 +73,7 @@ export function ChatPage() {
           <div className="my-auto w-full max-w-3xl animate-fade-up">
             <div className="mb-6 flex flex-col items-center text-center lg:mb-8">
               <div className="flex items-center justify-center gap-3 sm:gap-4">
-                <Logo compact alt="" className="h-9 w-9 shrink-0 sm:h-11 sm:w-11" />
+                <Logo alt="" className="h-9 w-9 shrink-0 sm:h-11 sm:w-11" />
                 <h1 className="text-balance text-center text-[26px] font-semibold leading-tight tracking-tight sm:text-[30px] lg:whitespace-nowrap lg:text-[36px]">Your financial intelligence, reimagined.</h1>
               </div>
               <p className="mt-3 max-w-xl text-balance text-[15px] leading-relaxed text-muted lg:mt-4">

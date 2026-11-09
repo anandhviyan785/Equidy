@@ -1,16 +1,11 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { X, TrendingUp, TrendingDown } from "lucide-react";
 import { cn, pct, tone } from "@/lib/format";
-import wordmarkUrl from "@/assets/wordmark.png";
 import logoUrl from "@/assets/logo-block.png";
 
-export function Logo({ compact = false, className, alt = "Equidy" }: { compact?: boolean; className?: string; alt?: string }) {
-  // Assets are white-on-transparent; invert them to black in light mode.
-  return compact ? (
-    <img src={logoUrl} alt={alt} className={cn("select-none invert dark:invert-0", className ?? "h-7 w-7")} draggable={false} />
-  ) : (
-    <img src={wordmarkUrl} alt={alt} className={cn("h-5 w-auto select-none invert dark:invert-0", className)} draggable={false} />
-  );
+export function Logo({ className, alt = "Equidy" }: { className?: string; alt?: string }) {
+  // The asset is white-on-transparent; invert it to black in light mode.
+  return <img src={logoUrl} alt={alt} className={cn("select-none invert dark:invert-0", className ?? "h-7 w-7")} draggable={false} />;
 }
 
 /** Loading indicator: a rising stock line that draws itself, with a ring spinning around it. */

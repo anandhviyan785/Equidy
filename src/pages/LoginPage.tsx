@@ -57,7 +57,7 @@ export function LoginPage() {
   return (
     <div className="flex min-h-full flex-col bg-bg lg:flex-row">
       <section className="flex flex-1 flex-col px-6 py-8 sm:px-10">
-        <Logo className="self-start" />
+        <Link to="/" aria-label="Equidy home" className="self-start rounded-lg"><Logo alt="" /></Link>
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12 animate-fade-up">
           <h1 className="text-balance text-3xl font-semibold tracking-tight">{mode === "Sign in" ? "Welcome back" : "Create your account"}</h1>
           <p className="mt-2 text-[15px] text-muted">
