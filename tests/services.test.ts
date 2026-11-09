@@ -2,7 +2,14 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { scrubEvent } from "../server/monitoring";
-import { toStatement, usesStandardPostgres } from "../server/db";
+import { sslOptions, toStatement, usesStandardPostgres } from "../server/db";
+
+describe("sslOptions", () => {
+  it("always verifies certificates and uses the provided CA", () => {
+    expect(sslOptions(undefined)).toEqual({ rejectUnauthorized: true });
+    expect(sslOptions("A\\nB")).toEqual({ ca: "A\nB", rejectUnauthorized: true });
+  });
+});
 import { welcomeEmail } from "../server/email";
 import { relevantHeadlines } from "../server/vector";
 import { shouldAdoptLocalData } from "../src/lib/adopt";

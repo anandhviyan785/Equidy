@@ -119,27 +119,39 @@ export function readSession(req: Request): SessionUser | null {
   return readSessionDetails(req)?.user ?? null;
 }
 
+/** True when the session belongs to an account deleted after the session was issued. Fails open if the check is unavailable. */
+async function sessionRevoked(session: { user: SessionUser; issuedAt: number }): Promise<boolean> {
+  try {
+    return await isSessionRevoked(session.user.id, session.issuedAt);
+  } catch (err) {
+    console.warn("[equidy] deleted-account check unavailable:", (err as Error).message);
+    return false;
+  }
+}
+
+/** The signed-in user, or null when there is no session or its account was deleted. */
+async function liveSessionUser(req: Request): Promise<SessionUser | null> {
+  const session = readSessionDetails(req);
+  if (!session || (await sessionRevoked(session))) return null;
+  return session.user;
+}
+
 /** Blocks a route unless the visitor is signed in — only when sign-in is configured at all. */
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!authEnabled() || readSession(req)) return next();
-  res.status(401).json({ error: "Please sign in to continue." });
+  if (!authEnabled()) return next();
+  liveSessionUser(req).then((user) => {
+    if (user) return void next();
+    res.status(401).json({ error: "Please sign in to continue." });
+  }, next);
 }
 
 /** Blocks a route unless there is a real signed-in user (for per-user data such as sync and bank links). */
 export function requireUser(req: Request, res: Response, next: NextFunction) {
-  const session = readSessionDetails(req);
-  if (!session) return void res.status(401).json({ error: "Please sign in to continue." });
-  isSessionRevoked(session.user.id, session.issuedAt)
-    .catch((err) => {
-      console.warn("[equidy] deleted-account check unavailable:", (err as Error).message);
-      return false;
-    })
-    .then((revoked) => {
-      if (revoked) return void res.status(401).json({ error: "Please sign in to continue." });
-      res.locals.user = session.user;
-      next();
-    })
-    .catch(next);
+  liveSessionUser(req).then((user) => {
+    if (!user) return void res.status(401).json({ error: "Please sign in to continue." });
+    res.locals.user = user;
+    next();
+  }, next);
 }
 
 // ---------------- routes ----------------
@@ -160,7 +172,7 @@ export const authRouter = express.Router();
 authRouter.use(express.urlencoded({ extended: false })); // Apple posts its callback as a form
 
 authRouter.get("/session", asyncHandler(async (req, res) => {
-  res.json({ user: readSession(req), providers: await getProviders(), accounts: accountsEnabled(), clerk: clerkEnabled() });
+  res.json({ user: await liveSessionUser(req), providers: await getProviders(), accounts: accountsEnabled(), clerk: clerkEnabled() });
 }));
 
 authRouter.post("/logout", (_req, res) => {
@@ -217,7 +229,7 @@ authRouter.post("/clerk", express.json(), async (req, res) => {
 
 // Account deletion (required by the App Store and Google Play for apps with sign-up).
 authRouter.post("/delete", asyncHandler(async (req, res) => {
-  const user = readSession(req);
+  const user = await liveSessionUser(req);
   if (!user) return void res.status(401).json({ error: "Please sign in to continue." });
   try {
     await cancelBillingFor(user.id);

@@ -74,3 +74,34 @@ describe("hasLiveSubscription", () => {
     for (const s of ["canceled", "incomplete_expired", null, undefined]) expect(hasLiveSubscription(s)).toBe(false);
   });
 });
+
+describe("parseUserData NUL handling", () => {
+  it("removes NUL characters that Postgres JSONB would reject", async () => {
+    const { parseUserData } = await import("../server/userdata");
+    const d = parseUserData({ chats: [{ id: "c", messages: [{ text: "a\u0000b" }] }], updatedAt: 1 });
+    expect(JSON.stringify(d.chats)).not.toContain("\u0000");
+    expect(JSON.stringify(d.chats)).toContain("ab");
+  });
+});
+
+describe("deleted-account sessions", () => {
+  it("rejects a valid session cookie once the account is tombstoned", async () => {
+    vi.resetModules();
+    process.env.SESSION_SECRET = "test-secret";
+    vi.doMock("../server/tombstones", () => ({ isSessionRevoked: async () => true, markUserDeleted: async () => undefined }));
+    const { app } = await import("../server/app");
+    const crypto = await import("node:crypto");
+    const body = Buffer.from(JSON.stringify({ user: { id: "email:a@b.c", provider: "email", name: "A", email: null, avatar: null }, exp: Date.now() + 86_400_000 })).toString("base64url");
+    const cookie = `equidy_session=${body}.${crypto.createHmac("sha256", "test-secret").update(body).digest("base64url")}`;
+    const server = app.listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    try {
+      const res = await fetch(`${base}/api/auth/session`, { headers: { Cookie: cookie } });
+      expect((await res.json()).user).toBeNull();
+    } finally {
+      server.close();
+      vi.doUnmock("../server/tombstones");
+    }
+  });
+});

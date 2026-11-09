@@ -102,7 +102,8 @@ export async function signOut() {
 export async function deleteAccount() {
   const wasClerk = useAuth.getState().user?.provider === "clerk";
   const res = await fetch("/api/auth/delete", { method: "POST", credentials: "same-origin" }).catch(() => null);
-  if (res && !res.ok && res.status !== 401) {
+  if (!res) throw new Error("We couldn't reach the server, so your account was not deleted. Check your connection and try again.");
+  if (!res.ok && res.status !== 401) {
     const j = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(j.error || "We couldn't delete your account. Please try again.");
   }

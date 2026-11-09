@@ -21,6 +21,11 @@ export function toStatement(strings: readonly string[]): string {
   return strings.reduce((text, part, i) => `${text}$${i}${part}`);
 }
 
+/** TLS options for standard Postgres: certificates are always verified; DATABASE_CA adds a custom CA (Supabase may need it). */
+export function sslOptions(ca: string | undefined): { ca?: string; rejectUnauthorized: true } {
+  return ca ? { ca: ca.replace(/\\n/g, "\n"), rejectUnauthorized: true } : { rejectUnauthorized: true };
+}
+
 function standardPostgres(url: string): Sql {
   const ca = getEnv("DATABASE_CA");
   // One connection per serverless instance: the provider's pooler handles sharing.
@@ -29,7 +34,7 @@ function standardPostgres(url: string): Sql {
     max: 1,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 8_000,
-    ssl: ca ? { ca: ca.replace(/\\n/g, "\n") } : { rejectUnauthorized: false },
+    ssl: sslOptions(ca),
   });
   const run = async (strings: TemplateStringsArray, ...values: unknown[]) => (await pool.query(toStatement(strings), values)).rows;
   return run as unknown as Sql;

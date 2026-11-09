@@ -33,11 +33,11 @@ function ensureTable(): Promise<void> {
   return table;
 }
 
-interface SubscriptionRow { customer_id: string; subscription_id: string | null; status: string }
+interface SubscriptionRow { customer_id: string; subscription_id: string | null; status: string; event_created: number | string | null }
 
 async function findSubscription(userId: string): Promise<SubscriptionRow | null> {
   await ensureTable();
-  const rows = (await db()`SELECT customer_id, subscription_id, status FROM equidy_subscriptions WHERE user_id = ${userId}`) as SubscriptionRow[];
+  const rows = (await db()`SELECT customer_id, subscription_id, status, event_created FROM equidy_subscriptions WHERE user_id = ${userId}`) as SubscriptionRow[];
   return rows[0] ?? null;
 }
 
@@ -69,15 +69,17 @@ export async function applyStripeEvent(event: Stripe.Event): Promise<void> {
     if (session.mode !== "subscription" || session.payment_status !== "paid") return;
     const subscriptionId = idOf(session.subscription);
     const existing = await findSubscription(session.client_reference_id);
-    if (existing?.subscription_id && subscriptionId && existing.subscription_id !== subscriptionId && !ENDED_STATUSES.includes(existing.status)) {
-      await cancelSubscription(await stripeClient(), existing.subscription_id); // the new purchase replaces the old one
-    }
+    if (existing && Number(existing.event_created ?? 0) > event.created) return; // a replayed older event must not touch newer state
     await ensureTable();
+    // Save the new subscription first, so a late "deleted" event for the old one can no longer match this row.
     await db()`
       INSERT INTO equidy_subscriptions (user_id, customer_id, subscription_id, status, updated_at, event_created)
       VALUES (${session.client_reference_id}, ${customer}, ${subscriptionId}, 'active', now(), ${event.created})
       ON CONFLICT (user_id) DO UPDATE SET customer_id = EXCLUDED.customer_id, subscription_id = EXCLUDED.subscription_id, status = 'active', updated_at = now(), event_created = EXCLUDED.event_created
       WHERE equidy_subscriptions.event_created <= EXCLUDED.event_created`;
+    if (existing?.subscription_id && subscriptionId && existing.subscription_id !== subscriptionId && !ENDED_STATUSES.includes(existing.status)) {
+      await cancelSubscription(await stripeClient(), existing.subscription_id); // the new purchase replaces the old one
+    }
   } else if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
     const subscription = event.data.object;
     const status = event.type === "customer.subscription.deleted" ? "canceled" : subscription.status;

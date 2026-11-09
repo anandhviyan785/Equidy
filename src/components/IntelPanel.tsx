@@ -10,8 +10,8 @@ export function NewsList({ items, empty = "No recent headlines." }: { items: New
   if (!items.length) return <p className="text-sm text-muted">{empty}</p>;
   return (
     <ul className="divide-y divide-line">
-      {items.map((n) => (
-        <li key={n.url} className="py-2.5">
+      {items.filter((n) => /^https?:\/\//i.test(n.url)).map((n) => (
+        <li key={`${n.url}-${n.datetime}`} className="py-2.5">
           <a href={n.url} target="_blank" rel="noopener noreferrer" className="group block">
             <div className="flex items-start gap-1.5 text-sm font-medium leading-snug group-hover:underline">
               <span className="min-w-0 flex-1">{n.headline}</span>
