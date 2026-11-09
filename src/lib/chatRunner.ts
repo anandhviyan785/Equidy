@@ -3,6 +3,7 @@ import { useChats, type ChatMessage } from "@/store";
 import { aiTitle, streamChat } from "./ai";
 import { summarizeTitle } from "./titles";
 import { uid } from "./format";
+import { createTypewriter } from "./typewriter";
 
 interface RunState {
   streaming: Record<string, string>; // conversationId -> assistant message id
@@ -30,31 +31,17 @@ export async function send(conversationId: string, text?: string) {
   controllers.set(conversationId, ctrl);
   useRuns.setState((s) => ({ streaming: { ...s.streaming, [conversationId]: reply.id } }));
 
-  let acc = "";
-  let pending = "";
-  let raf = 0;
-  const flush = () => {
-    raf = 0;
-    acc += pending;
-    pending = "";
-    useChats.getState().patchMessage(conversationId, reply.id, { content: acc });
-  };
+  const typer = createTypewriter((shown) => useChats.getState().patchMessage(conversationId, reply.id, { content: shown }));
+  // Stop shows everything received so far right away.
+  ctrl.signal.addEventListener("abort", () => typer.finish(), { once: true });
 
   try {
-    const source = await streamChat({
-      history,
-      signal: ctrl.signal,
-      onDelta: (t) => {
-        pending += t;
-        if (!raf) raf = requestAnimationFrame(flush);
-      },
-    });
-    if (raf) cancelAnimationFrame(raf);
-    flush();
+    const source = await streamChat({ history, signal: ctrl.signal, onDelta: typer.push });
+    await typer.drained();
+    typer.finish();
     useChats.getState().patchMessage(conversationId, reply.id, { source });
   } catch (err) {
-    if (raf) cancelAnimationFrame(raf);
-    flush();
+    const acc = typer.finish();
     if (!ctrl.signal.aborted) {
       useChats.getState().patchMessage(conversationId, reply.id, {
         content: acc + (acc ? "\n\n" : "") + `**Something went wrong.** ${(err as Error).message}`,
