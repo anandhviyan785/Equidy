@@ -119,7 +119,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-up { animation: none; }
+  .animate-fade-up, .animate-chart-draw { animation: none; }
+  .animate-ring-spin { animation-duration: 2.4s; }
   .btn:active, button.card:active { transform: none; }
 }
 

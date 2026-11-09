@@ -1,12 +1,12 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Info, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Info } from "lucide-react";
 import { INDICES } from "@/data/securities";
 import { history } from "@/lib/market";
 import { demoSignIn, loadAuth, providerLabel, signInWithEmail, signUpWithEmail, startOAuth, type AuthInfo } from "@/lib/auth";
 import { useAuth, useMarket, type ProviderId } from "@/store";
 import { useLiveTicks, useThemeSync } from "@/hooks";
-import { Change, Logo, Segmented } from "@/components/ui";
+import { Change, Logo, Segmented, StockSpinner } from "@/components/ui";
 import { Sparkline } from "@/components/charts";
 import { cn, price } from "@/lib/format";
 
@@ -68,10 +68,10 @@ export function LoginPage() {
             <div role="alert" className="mt-6 rounded-xl border border-down/40 bg-down/10 px-3.5 py-2.5 text-sm text-down">{error}</div>
           )}
 
-          {!info && <div className="mt-10 flex justify-center text-muted"><Loader2 className="h-5 w-5 animate-spin" /></div>}
+          {!info && <div className="mt-10 flex justify-center text-muted"><StockSpinner className="h-5 w-5" /></div>}
 
           {clerkOn && (
-            <Suspense fallback={<div className="mt-10 flex justify-center text-muted"><Loader2 className="h-5 w-5 animate-spin" /></div>}>
+            <Suspense fallback={<div className="mt-10 flex justify-center text-muted"><StockSpinner className="h-5 w-5" /></div>}>
               <ClerkSignIn publishableKey={CLERK_KEY as string} onError={setError} />
             </Suspense>
           )}
@@ -109,7 +109,7 @@ export function LoginPage() {
                 {mode === "Create account" && <p className="mt-1.5 text-xs text-muted">At least 8 characters.</p>}
               </div>
               <button className="btn-primary h-11 w-full text-[15px]" disabled={!!busy || !email || !password || (mode === "Create account" && !name)}>
-                {busy === "email" && <Loader2 className="h-4 w-4 animate-spin" />}
+                {busy === "email" && <StockSpinner className="h-4 w-4" />}
                 {mode}
               </button>
             </form>
@@ -128,7 +128,7 @@ export function LoginPage() {
                     disabled={!!busy}
                     className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface text-[15px] font-medium transition-colors hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg disabled:opacity-50"
                   >
-                    {busy === p ? <Loader2 className="h-5 w-5 animate-spin" /> : <ProviderIcon p={p} />}
+                    {busy === p ? <StockSpinner className="h-5 w-5" /> : <ProviderIcon p={p} />}
                     Continue with {providerLabel(p)}
                   </button>
                 ))}

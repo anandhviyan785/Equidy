@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { loadAuth } from "@/lib/auth";
+import { StockSpinner } from "@/components/ui";
 
 const LandingPage = lazy(() => import("./LandingPage").then((m) => ({ default: m.LandingPage })));
 
@@ -27,7 +28,7 @@ export function LandingRoute() {
   useEffect(() => { void loadAuth(); }, []);
   return (
     <LandingBoundary>
-      <Suspense fallback={<div className="dark min-h-full bg-bg" />}>
+      <Suspense fallback={<div className="dark grid min-h-full place-items-center bg-bg text-muted"><StockSpinner className="h-10 w-10" /></div>}>
         <LandingPage />
       </Suspense>
     </LandingBoundary>

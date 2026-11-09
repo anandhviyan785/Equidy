@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { StockSpinner } from "./ui";
 
 const ACTIVE = ["active", "trialing", "past_due"];
 const FRIENDLY_ERROR = "We couldn't reach billing. Please try again.";
@@ -43,7 +43,7 @@ export function BillingSection() {
       <p className="mt-0.5 text-sm text-muted">{subscribed ? "Your subscription is active." : "Upgrade through Stripe's secure checkout."}</p>
       {error && <p role="alert" className="mt-3 text-sm text-down">{error}</p>}
       <button className="btn-primary mt-4" onClick={() => void open()} disabled={busy}>
-        {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+        {busy && <StockSpinner className="h-4 w-4" />}
         {subscribed ? "Manage subscription" : "Upgrade"}
       </button>
     </section>

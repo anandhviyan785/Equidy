@@ -13,6 +13,28 @@ export function Logo({ compact = false, className, alt = "Equidy" }: { compact?:
   );
 }
 
+/** Loading indicator: a rising stock line that draws itself, with a ring spinning around it. */
+export function StockSpinner({ className, label = "Loading" }: { className?: string; label?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" role="status" aria-label={label} className={cn("h-5 w-5 shrink-0", className)}>
+      <circle cx="12" cy="12" r="10.5" stroke="currentColor" strokeOpacity="0.2" strokeWidth="1.75" />
+      <g className="origin-center animate-ring-spin" style={{ transformBox: "fill-box" }}>
+        <circle cx="12" cy="12" r="10.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeDasharray="18 48" />
+      </g>
+      <path
+        d="M6.5 15.5 10 12l2.5 2 5-5.5M14.5 8.5h3v3"
+        pathLength={1}
+        strokeDasharray="1 1"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="animate-chart-draw"
+      />
+    </svg>
+  );
+}
+
 export function Change({ value, className, icon = false, decimals = 2 }: { value: number; className?: string; icon?: boolean; decimals?: number }) {
   const Icon = value >= 0 ? TrendingUp : TrendingDown;
   return (

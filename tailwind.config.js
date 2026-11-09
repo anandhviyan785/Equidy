@@ -23,8 +23,14 @@ export default {
       keyframes: {
         "fade-up": { from: { opacity: 0, transform: "translateY(6px)" }, to: { opacity: 1, transform: "none" } },
         blink: { "0%,100%": { opacity: 0.2 }, "50%": { opacity: 1 } },
+        "chart-draw": { "0%": { strokeDashoffset: "1" }, "55%,85%": { strokeDashoffset: "0" }, "100%": { strokeDashoffset: "-1" } },
       },
-      animation: { "fade-up": "fade-up .35s ease-out both", blink: "blink 1.2s infinite" },
+      animation: {
+        "fade-up": "fade-up .35s ease-out both",
+        blink: "blink 1.2s infinite",
+        "chart-draw": "chart-draw 1.6s ease-in-out infinite",
+        "ring-spin": "spin .9s linear infinite",
+      },
     },
   },
   plugins: [typography],
