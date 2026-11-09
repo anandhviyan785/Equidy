@@ -17,13 +17,22 @@ function allowedOrigins(): string[] {
   return [`${url.protocol}//${bare}${port}`, `${url.protocol}//www.${bare}${port}`];
 }
 
+interface ClerkEmail { emailAddress: string; verification?: { status?: string } | null }
+
+/** The primary email if verified, else any verified email, else null. Unverified addresses are never used. */
+export function verifiedEmail(person: { primaryEmailAddress?: ClerkEmail | null; emailAddresses?: ClerkEmail[] }): string | null {
+  const isVerified = (e?: ClerkEmail | null): e is ClerkEmail => e?.verification?.status === "verified";
+  if (isVerified(person.primaryEmailAddress)) return person.primaryEmailAddress.emailAddress;
+  return (person.emailAddresses ?? []).find(isVerified)?.emailAddress ?? null;
+}
+
 export async function verifyClerkUser(token: string): Promise<{ user: SessionUser; isNew: boolean }> {
   const secretKey = getEnv("CLERK_SECRET_KEY");
   if (!secretKey) throw new Error("Clerk isn't configured.");
   const { createClerkClient, verifyToken } = await import("@clerk/backend");
   const claims = await verifyToken(token, { secretKey, authorizedParties: allowedOrigins() });
   const person = await createClerkClient({ secretKey }).users.getUser(claims.sub);
-  const email = person.primaryEmailAddress?.emailAddress ?? person.emailAddresses[0]?.emailAddress ?? null;
+  const email = verifiedEmail(person);
   const name = [person.firstName, person.lastName].filter(Boolean).join(" ") || person.username || email?.split("@")[0] || "Equidy user";
   return {
     user: { id: `clerk:${person.id}`, provider: "clerk", name, email, avatar: person.imageUrl ?? null },

@@ -8,6 +8,8 @@ import { cancelBillingFor } from "./billing.js";
 import { clerkEnabled, deleteClerkUser, verifyClerkUser } from "./clerk.js";
 import { sendWelcomeEmail } from "./email.js";
 import { reportError } from "./monitoring.js";
+import { asyncHandler } from "./async.js";
+import { isSessionRevoked, markUserDeleted } from "./tombstones.js";
 
 // Sign-in: email + password accounts (stored in Postgres, see accounts.ts) and OAuth with
 // Google, Microsoft (Entra ID) and Apple. Each OAuth provider is enabled when its credentials are set.
@@ -26,8 +28,12 @@ const APP_URL = appUrl();
 const SECURE = APP_URL.startsWith("https://");
 const SESSION_COOKIE = "equidy_session";
 const SESSION_DAYS = 30;
-const SECRET = getEnv("SESSION_SECRET") || crypto.randomBytes(32).toString("hex");
-if (!getEnv("SESSION_SECRET")) console.warn("[equidy] SESSION_SECRET not set — sessions will reset when the server restarts.");
+const IS_PRODUCTION = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
+// In production a missing secret fails closed (no sessions) rather than using a per-instance random key,
+// which would silently break sign-in across serverless instances.
+const SECRET: string | null = getEnv("SESSION_SECRET") || (IS_PRODUCTION ? null : crypto.randomBytes(32).toString("hex"));
+if (!SECRET) console.error("[equidy] SESSION_SECRET is not set in production — sign-in is disabled until it is configured.");
+else if (!getEnv("SESSION_SECRET")) console.warn("[equidy] SESSION_SECRET not set — sessions will reset when the server restarts.");
 
 const callback = (p: ProviderId) => `${APP_URL}/api/auth/${p}/callback`;
 
@@ -60,9 +66,17 @@ function parseCookies(req: Request): Record<string, string> {
   const out: Record<string, string> = {};
   for (const part of (req.headers.cookie ?? "").split(";")) {
     const i = part.indexOf("=");
-    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    if (i > 0) out[part.slice(0, i).trim()] = safeDecode(part.slice(i + 1).trim());
   }
   return out;
+}
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value; // malformed escape: keep it raw; it will fail signature checks
+  }
 }
 
 function setCookie(res: Response, name: string, value: string, opts: { maxAge: number; sameSite?: "Lax" | "None" }) {
@@ -72,26 +86,37 @@ function setCookie(res: Response, name: string, value: string, opts: { maxAge: n
   res.append("Set-Cookie", parts.join("; "));
 }
 
-const sign = (data: string) => crypto.createHmac("sha256", SECRET).update(data).digest("base64url");
+const sign = (data: string) => {
+  if (!SECRET) throw new Error("SESSION_SECRET is not configured.");
+  return crypto.createHmac("sha256", SECRET).update(data).digest("base64url");
+};
 
 function encodeSession(user: SessionUser) {
   const body = Buffer.from(JSON.stringify({ user, exp: Date.now() + SESSION_DAYS * 86_400_000 })).toString("base64url");
   return `${body}.${sign(body)}`;
 }
 
-export function readSession(req: Request): SessionUser | null {
+/** The signed-in user and when their session was issued, or null (also null when no SESSION_SECRET is set in production). */
+function readSessionDetails(req: Request): { user: SessionUser; issuedAt: number } | null {
+  if (!SECRET) return null;
   const raw = parseCookies(req)[SESSION_COOKIE];
   if (!raw) return null;
   const [body, sig] = raw.split(".");
   if (!body || !sig) return null;
   const expected = sign(body);
-  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  const sigBytes = Buffer.from(sig);
+  const expectedBytes = Buffer.from(expected);
+  if (sigBytes.length !== expectedBytes.length || !crypto.timingSafeEqual(sigBytes, expectedBytes)) return null;
   try {
     const { user, exp } = JSON.parse(Buffer.from(body, "base64url").toString()) as { user: SessionUser; exp: number };
-    return exp > Date.now() ? user : null;
+    return exp > Date.now() ? { user, issuedAt: exp - SESSION_DAYS * 86_400_000 } : null;
   } catch {
     return null;
   }
+}
+
+export function readSession(req: Request): SessionUser | null {
+  return readSessionDetails(req)?.user ?? null;
 }
 
 /** Blocks a route unless the visitor is signed in — only when sign-in is configured at all. */
@@ -102,10 +127,19 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 /** Blocks a route unless there is a real signed-in user (for per-user data such as sync and bank links). */
 export function requireUser(req: Request, res: Response, next: NextFunction) {
-  const user = readSession(req);
-  if (!user) return void res.status(401).json({ error: "Please sign in to continue." });
-  res.locals.user = user;
-  next();
+  const session = readSessionDetails(req);
+  if (!session) return void res.status(401).json({ error: "Please sign in to continue." });
+  isSessionRevoked(session.user.id, session.issuedAt)
+    .catch((err) => {
+      console.warn("[equidy] deleted-account check unavailable:", (err as Error).message);
+      return false;
+    })
+    .then((revoked) => {
+      if (revoked) return void res.status(401).json({ error: "Please sign in to continue." });
+      res.locals.user = session.user;
+      next();
+    })
+    .catch(next);
 }
 
 // ---------------- routes ----------------
@@ -125,9 +159,9 @@ function fail(res: Response, message: string) {
 export const authRouter = express.Router();
 authRouter.use(express.urlencoded({ extended: false })); // Apple posts its callback as a form
 
-authRouter.get("/session", async (req, res) => {
+authRouter.get("/session", asyncHandler(async (req, res) => {
   res.json({ user: readSession(req), providers: await getProviders(), accounts: accountsEnabled(), clerk: clerkEnabled() });
-});
+}));
 
 authRouter.post("/logout", (_req, res) => {
   setCookie(res, SESSION_COOKIE, "", { maxAge: 0 });
@@ -146,7 +180,7 @@ function accountRoute(action: "signup" | "signin") {
       const acct = action === "signup" ? await createAccount(body) : await verifyAccount(body);
       const user: SessionUser = { id: `email:${acct.id}`, provider: "email", name: acct.name, email: acct.email, avatar: null };
       startSession(res, user);
-      if (action === "signup") await sendWelcomeEmail(acct.email, acct.name);
+      // No welcome email here: the address is unverified and the name is user-chosen text.
       res.json({ user });
     } catch (err) {
       if (err instanceof AccountError) return void res.status(err.status).json({ error: err.message });
@@ -182,11 +216,12 @@ authRouter.post("/clerk", express.json(), async (req, res) => {
 });
 
 // Account deletion (required by the App Store and Google Play for apps with sign-up).
-authRouter.post("/delete", async (req, res) => {
+authRouter.post("/delete", asyncHandler(async (req, res) => {
   const user = readSession(req);
   if (!user) return void res.status(401).json({ error: "Please sign in to continue." });
   try {
     await cancelBillingFor(user.id);
+    await markUserDeleted(user.id);
     await deleteUserData(user.id);
     if (user.provider === "email") await deleteAccount(user.id.replace(/^email:/, ""));
     if (user.provider === "clerk") await deleteClerkUser(user.id.replace(/^clerk:/, ""));
@@ -198,7 +233,7 @@ authRouter.post("/delete", async (req, res) => {
     const status = err instanceof AccountError ? err.status : 500;
     res.status(status).json({ error: err instanceof AccountError ? err.message : "We couldn't delete your account. Please try again." });
   }
-});
+}));
 
 // ---------------- OAuth ----------------
 
@@ -256,5 +291,5 @@ async function handleCallback(req: Request, res: Response) {
   }
 }
 
-authRouter.get("/:provider/callback", handleCallback);
-authRouter.post("/:provider/callback", handleCallback);
+authRouter.get("/:provider/callback", asyncHandler(handleCallback));
+authRouter.post("/:provider/callback", asyncHandler(handleCallback));

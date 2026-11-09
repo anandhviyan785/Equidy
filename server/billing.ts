@@ -24,8 +24,12 @@ function ensureTable(): Promise<void> {
       customer_id TEXT NOT NULL,
       subscription_id TEXT,
       status TEXT NOT NULL,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    )`.then(() => undefined).catch((e) => { table = null; throw e; });
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      event_created BIGINT NOT NULL DEFAULT 0
+    )`
+    .then(() => db()`ALTER TABLE equidy_subscriptions ADD COLUMN IF NOT EXISTS event_created BIGINT NOT NULL DEFAULT 0`)
+    .then(() => undefined)
+    .catch((e) => { table = null; throw e; });
   return table;
 }
 
@@ -39,22 +43,49 @@ async function findSubscription(userId: string): Promise<SubscriptionRow | null>
 
 const idOf = (v: string | { id: string } | null | undefined) => (typeof v === "string" ? v : (v?.id ?? null));
 
+const LIVE_STATUSES = ["active", "trialing", "past_due"];
+const ENDED_STATUSES = ["canceled", "incomplete_expired"];
+
+/** True when a stored status means the person already has a subscription that should not be duplicated. */
+export const hasLiveSubscription = (status: string | null | undefined) => !!status && LIVE_STATUSES.includes(status);
+
+/** Cancels a Stripe subscription; one that is already gone or canceled counts as success. */
+async function cancelSubscription(stripe: Stripe, id: string): Promise<void> {
+  try {
+    await stripe.subscriptions.cancel(id);
+  } catch (err) {
+    const e = err as { code?: string; statusCode?: number; message?: string };
+    if (e.code === "resource_missing" || e.statusCode === 404 || /already.*cancel|cancel.*already/i.test(e.message ?? "")) return;
+    throw err;
+  }
+}
+
 /** Applies one verified Stripe event to the database. */
 export async function applyStripeEvent(event: Stripe.Event): Promise<void> {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     const customer = idOf(session.customer);
     if (!session.client_reference_id || !customer) return;
+    if (session.mode !== "subscription" || session.payment_status !== "paid") return;
+    const subscriptionId = idOf(session.subscription);
+    const existing = await findSubscription(session.client_reference_id);
+    if (existing?.subscription_id && subscriptionId && existing.subscription_id !== subscriptionId && !ENDED_STATUSES.includes(existing.status)) {
+      await cancelSubscription(await stripeClient(), existing.subscription_id); // the new purchase replaces the old one
+    }
     await ensureTable();
     await db()`
-      INSERT INTO equidy_subscriptions (user_id, customer_id, subscription_id, status, updated_at)
-      VALUES (${session.client_reference_id}, ${customer}, ${idOf(session.subscription)}, 'active', now())
-      ON CONFLICT (user_id) DO UPDATE SET customer_id = EXCLUDED.customer_id, subscription_id = EXCLUDED.subscription_id, status = 'active', updated_at = now()`;
+      INSERT INTO equidy_subscriptions (user_id, customer_id, subscription_id, status, updated_at, event_created)
+      VALUES (${session.client_reference_id}, ${customer}, ${subscriptionId}, 'active', now(), ${event.created})
+      ON CONFLICT (user_id) DO UPDATE SET customer_id = EXCLUDED.customer_id, subscription_id = EXCLUDED.subscription_id, status = 'active', updated_at = now(), event_created = EXCLUDED.event_created
+      WHERE equidy_subscriptions.event_created <= EXCLUDED.event_created`;
   } else if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
     const subscription = event.data.object;
     const status = event.type === "customer.subscription.deleted" ? "canceled" : subscription.status;
     await ensureTable();
-    await db()`UPDATE equidy_subscriptions SET subscription_id = ${subscription.id}, status = ${status}, updated_at = now() WHERE customer_id = ${idOf(subscription.customer)}`;
+    // Ignore events about a different (older, replaced) subscription and events older than what is stored.
+    await db()`
+      UPDATE equidy_subscriptions SET subscription_id = ${subscription.id}, status = ${status}, updated_at = now(), event_created = ${event.created}
+      WHERE customer_id = ${idOf(subscription.customer)} AND (subscription_id IS NULL OR subscription_id = ${subscription.id}) AND event_created <= ${event.created}`;
   }
 }
 
@@ -83,10 +114,13 @@ export async function cancelBillingFor(userId: string): Promise<void> {
   if (!billingEnabled()) return;
   const row = await findSubscription(userId);
   if (!row) return;
-  if (row.subscription_id && !["canceled", "incomplete_expired"].includes(row.status)) {
-    const stripe = await stripeClient();
-    await stripe.subscriptions.cancel(row.subscription_id);
-  }
+  const stripe = await stripeClient();
+  const ids = new Set<string>();
+  if (row.subscription_id && !ENDED_STATUSES.includes(row.status)) ids.add(row.subscription_id);
+  // Also find any other subscription the customer has (for example one left over from a double checkout).
+  const listed = await stripe.subscriptions.list({ customer: row.customer_id, status: "all", limit: 100 });
+  for (const sub of listed.data) if (!ENDED_STATUSES.includes(sub.status)) ids.add(sub.id);
+  for (const id of ids) await cancelSubscription(stripe, id);
   await db()`DELETE FROM equidy_subscriptions WHERE user_id = ${userId}`;
 }
 
@@ -116,6 +150,7 @@ billingRouter.post("/checkout", signedIn, async (_req, res) => {
   try {
     const user = sessionUser(res);
     const existing = await findSubscription(user.id);
+    if (hasLiveSubscription(existing?.status)) return void res.status(409).json({ error: "You already have a subscription. Use Manage billing to change it." });
     const stripe = await stripeClient();
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
