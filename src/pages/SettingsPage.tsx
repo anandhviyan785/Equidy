@@ -122,7 +122,7 @@ export function SettingsPage() {
           <Row label="Export data" hint="Download settings, portfolio and conversations as JSON.">
             <button className="btn-outline" onClick={exportData}><Download className="h-4 w-4" /> Export</button>
           </Row>
-          <Row label="Reset portfolio" hint="Restore the sample holdings and watchlist.">
+          <Row label="Reset portfolio" hint="Clear your holdings and restore the default watchlist.">
             {confirm === "portfolio" ? (
               <div className="flex gap-2"><button className="btn-ghost" onClick={() => setConfirm(null)}>Cancel</button><button className="btn bg-down text-white" onClick={() => { resetPortfolio(); setConfirm(null); }}>Confirm reset</button></div>
             ) : <button className="btn-outline" onClick={() => setConfirm("portfolio")}><RotateCcw className="h-4 w-4" /> Reset</button>}

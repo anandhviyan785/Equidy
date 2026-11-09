@@ -277,7 +277,7 @@ function Footer() {
     <footer className="border-t border-line px-4 py-10 sm:px-6">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <img src={logoUrl} alt="Equidy" className="h-7 w-7" />
+          <a href="#top" aria-label="Back to top" className="inline-block rounded-lg"><img src={logoUrl} alt="Equidy" className="h-7 w-7" /></a>
           <p className="mt-4 max-w-sm text-xs leading-relaxed text-muted">
             Equidy provides education and analysis, not personalised financial advice. Investing involves risk, including the loss of money.
           </p>
@@ -288,7 +288,7 @@ function Footer() {
           <Link to="/login" className="hover:text-fg">Sign in</Link>
         </nav>
       </div>
-      <p className="mx-auto mt-8 max-w-5xl text-xs text-muted">© 2026 Equidy</p>
+      <p className="mx-auto mt-8 max-w-5xl text-xs text-muted">© {new Date().getFullYear()} Equidy</p>
     </footer>
   );
 }
