@@ -13,7 +13,7 @@ export function TermsPage() {
     <div className="min-h-full bg-bg px-4 pb-16 pt-[max(2rem,env(safe-area-inset-top))]">
       <div className="mx-auto max-w-2xl">
         <div className="mb-10 flex items-center justify-between">
-          <Logo />
+          <Link to="/" aria-label="Equidy home" className="rounded-lg"><Logo alt="" /></Link>
           <button onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))} className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg">
             <ArrowLeft className="h-4 w-4" /> Back
           </button>

@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 
 export const Markdown = memo(function Markdown({ text }: { text: string }) {
   return (
-    <div className="prose-equidy">
+    <div className="prose-equidy prose-chat">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

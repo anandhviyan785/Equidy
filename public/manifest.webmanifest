@@ -1,7 +1,7 @@
 {
   "name": "Equidy",
   "short_name": "Equidy",
-  "description": "Your financial intelligence, reimagined.",
+  "description": "AI financial assistant for stocks, markets and your portfolio.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

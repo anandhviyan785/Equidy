@@ -73,7 +73,7 @@ export function ChatPage() {
           <div className="my-auto w-full max-w-3xl animate-fade-up">
             <div className="mb-6 flex flex-col items-center text-center lg:mb-8">
               <div className="flex items-center justify-center gap-3 sm:gap-4">
-                <Logo compact alt="" className="h-9 w-9 shrink-0 sm:h-11 sm:w-11" />
+                <Logo alt="" className="h-9 w-9 shrink-0 sm:h-11 sm:w-11" />
                 <h1 className="text-balance text-center text-[26px] font-semibold leading-tight tracking-tight sm:text-[30px] lg:whitespace-nowrap lg:text-[36px]">Your financial intelligence, reimagined.</h1>
               </div>
               <p className="mt-3 max-w-xl text-balance text-[15px] leading-relaxed text-muted lg:mt-4">
@@ -154,7 +154,7 @@ function Message({ m, streaming, canRegenerate, onRegenerate }: { m: ChatMessage
   if (m.role === "user") {
     return (
       <div className="flex justify-end animate-fade-up">
-        <div className="max-w-[85%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-elevated px-4 py-2.5 text-[15px] leading-relaxed">{m.content}</div>
+        <div className="max-w-[85%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-elevated px-4 py-2.5 text-lg leading-relaxed">{m.content}</div>
       </div>
     );
   }
@@ -168,7 +168,7 @@ function Message({ m, streaming, canRegenerate, onRegenerate }: { m: ChatMessage
         {m.content ? (
           <div className={cn(m.error && "text-down")}>
             <Markdown text={m.content} />
-            {streaming && <span className="ml-0.5 inline-block h-4 w-1.5 translate-y-0.5 animate-blink rounded-sm bg-accent" />}
+            {streaming && <span className="ml-0.5 inline-block h-5 w-1.5 translate-y-0.5 animate-blink rounded-sm bg-accent" />}
           </div>
         ) : (
           <div className="flex items-center gap-1.5 py-2" aria-label="Thinking">
@@ -210,7 +210,7 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
 
   return (
     // The large (home, desktop) box puts the send button on its own row; the compact box keeps it beside the text.
-    <div className={cn("card relative flex shadow-[0_8px_30px_rgb(0_0_0/0.12)] transition focus-within:border-accent/50", large ? "flex-col p-3" : "glass items-end gap-1 p-1.5 pl-2")}>
+    <div className={cn("card relative flex shadow-[0_8px_30px_rgb(0_0_0/0.12)] transition focus-within:border-accent/50", large ? "flex-col p-3" : "items-end gap-1 p-1.5 pl-2")}>
       <textarea
         ref={ref}
         rows={1}
@@ -220,7 +220,7 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); go(); }
         }}
         placeholder={narrow ? "Ask Equidy anything…" : "Ask Equidy about stocks, markets, or your portfolio…"}
-        className={cn("w-full resize-none bg-transparent px-2 leading-relaxed outline-none placeholder:text-muted", large ? "min-h-[56px] py-2 text-base" : "self-center py-1.5 text-[15px]")}
+        className={cn("w-full resize-none bg-transparent px-2 leading-relaxed outline-none placeholder:text-muted", large ? "min-h-[56px] py-2 text-lg" : "self-center py-1.5 text-lg")}
         aria-label="Message Equidy"
       />
       <div className={cn("flex shrink-0 items-center", large && "justify-between pl-1 pt-1")}>

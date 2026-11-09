@@ -1,15 +1,32 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { X, TrendingUp, TrendingDown } from "lucide-react";
 import { cn, pct, tone } from "@/lib/format";
-import wordmarkUrl from "@/assets/wordmark.png";
 import logoUrl from "@/assets/logo-block.png";
 
-export function Logo({ compact = false, className, alt = "Equidy" }: { compact?: boolean; className?: string; alt?: string }) {
-  // Assets are white-on-transparent; invert them to black in light mode.
-  return compact ? (
-    <img src={logoUrl} alt={alt} className={cn("select-none invert dark:invert-0", className ?? "h-7 w-7")} draggable={false} />
-  ) : (
-    <img src={wordmarkUrl} alt={alt} className={cn("h-5 w-auto select-none invert dark:invert-0", className)} draggable={false} />
+export function Logo({ className, alt = "Equidy" }: { className?: string; alt?: string }) {
+  // The asset is white-on-transparent; invert it to black in light mode.
+  return <img src={logoUrl} alt={alt} className={cn("select-none invert dark:invert-0", className ?? "h-7 w-7")} draggable={false} />;
+}
+
+/** Loading indicator: a rising stock line that draws itself, with a ring spinning around it. */
+export function StockSpinner({ className, label = "Loading" }: { className?: string; label?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" role="status" aria-label={label} className={cn("h-5 w-5 shrink-0", className)}>
+      <circle cx="12" cy="12" r="10.5" stroke="currentColor" strokeOpacity="0.2" strokeWidth="1.75" />
+      <g className="origin-center animate-ring-spin" style={{ transformBox: "fill-box" }}>
+        <circle cx="12" cy="12" r="10.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeDasharray="18 48" />
+      </g>
+      <path
+        d="M6.5 15.5 10 12l2.5 2 5-5.5M14.5 8.5h3v3"
+        pathLength={1}
+        strokeDasharray="1 1"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="animate-chart-draw"
+      />
+    </svg>
   );
 }
 
@@ -94,7 +111,7 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/35" onClick={onClose} />
-      <div ref={ref} role="dialog" aria-modal className="card glass glass-thick relative w-full max-w-md p-5 animate-fade-up">
+      <div ref={ref} role="dialog" aria-modal className="card floating relative w-full max-w-md p-5 animate-fade-up">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold">{title}</h2>
           <button className="btn-ghost -mr-2 p-1.5" onClick={onClose} aria-label="Close"><X className="h-4 w-4" /></button>

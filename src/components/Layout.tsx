@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Menu, SquarePen } from "lucide-react";
 import { Sidebar } from "./Sidebar";
-import { Logo } from "./ui";
+import { Logo, StockSpinner } from "./ui";
 import { TickerTape } from "./TickerTape";
 import { ConsentBanner } from "./ConsentBanner";
 import { LandingRoute } from "@/pages/LandingRoute";
@@ -48,7 +48,7 @@ export function Layout() {
 
   if (!user) {
     if (checked) return location.pathname === "/" ? <LandingRoute /> : <Navigate to="/login" replace />;
-    return <div className="grid h-full place-items-center"><Logo /></div>;
+    return <div className="grid h-full place-items-center text-muted"><StockSpinner className="h-10 w-10" /></div>;
   }
 
   return (
@@ -57,7 +57,7 @@ export function Layout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-line px-3 lg:hidden">
           <button className="btn-ghost p-2" onClick={() => setMobileOpen(true)} aria-label="Open menu"><Menu className="h-5 w-5" /></button>
-          <Logo compact />
+          <button className="rounded-lg p-1" onClick={() => navigate("/")} aria-label="Equidy home"><Logo alt="" /></button>
           <button className="btn-ghost p-2" onClick={() => navigate("/")} aria-label="New chat"><SquarePen className="h-5 w-5" /></button>
         </header>
         <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain" id="main">

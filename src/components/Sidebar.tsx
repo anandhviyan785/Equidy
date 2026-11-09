@@ -64,13 +64,13 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
       {mobileOpen && <div className="fixed inset-0 z-30 bg-black/35 lg:hidden" onClick={onCloseMobile} />}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex flex-col pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] glass-drawer border-r transition-[width,transform] duration-300 ease-out lg:static lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex flex-col pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] bg-bg border-r border-line transition-[width,transform] duration-300 ease-out lg:static lg:translate-x-0",
           isCollapsed ? "w-[64px]" : "w-[272px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className={cn("flex h-14 items-center px-3", isCollapsed ? "justify-center" : "justify-between")}>
-          {!isCollapsed && <button onClick={() => go("/")} className="rounded-lg px-1.5 py-1 hover:bg-elevated"><Logo compact /></button>}
+          {!isCollapsed && <button onClick={() => go("/")} className="rounded-lg px-1.5 py-1 hover:bg-elevated"><Logo /></button>}
           <button className="btn-ghost p-2 max-lg:hidden" onClick={onToggle} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
             {collapsed ? <PanelLeftOpen className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
           </button>
