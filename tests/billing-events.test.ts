@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const cancel = vi.fn(async () => ({}));
+const cancel = vi.fn(async (_id: string) => ({}));
+let listed: { id: string; status: string }[] = [];
+const list = vi.fn(async () => ({ data: listed }));
 let storedRow: Record<string, unknown> | null = null;
 const queries: string[] = [];
 
-vi.mock("stripe", () => ({ default: class { subscriptions = { cancel }; } }));
+vi.mock("stripe", () => ({ default: class { subscriptions = { cancel, list }; } }));
 vi.mock("../server/db", () => ({
   dbEnabled: () => true,
   db: () => async (strings: TemplateStringsArray) => {
@@ -24,6 +26,8 @@ const checkout = (sub: string, created: number) => ({
 describe("applyStripeEvent checkout ordering", () => {
   beforeEach(() => {
     cancel.mockClear();
+    list.mockClear();
+    listed = [];
     queries.length = 0;
     process.env.STRIPE_SECRET_KEY = "sk_test_x";
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_x";
@@ -43,5 +47,15 @@ describe("applyStripeEvent checkout ordering", () => {
     await applyStripeEvent(checkout("sub_B", 200));
     expect(queries.some((q) => q.includes("INSERT INTO equidy_subscriptions"))).toBe(true);
     expect(cancel).toHaveBeenCalledWith("sub_A");
+  });
+
+  it("still cancels the replaced subscription when Stripe retries after the cancel failed", async () => {
+    // First delivery saved sub_B but cancelling sub_A failed; the retry sees a row that already holds sub_B.
+    storedRow = { customer_id: "cus_1", subscription_id: "sub_B", status: "active", event_created: 200 };
+    listed = [{ id: "sub_A", status: "active" }, { id: "sub_B", status: "active" }];
+    const { applyStripeEvent } = await import("../server/billing");
+    await applyStripeEvent(checkout("sub_B", 200));
+    expect(cancel).toHaveBeenCalledWith("sub_A");
+    expect(cancel).not.toHaveBeenCalledWith("sub_B");
   });
 });

@@ -77,8 +77,15 @@ export async function applyStripeEvent(event: Stripe.Event): Promise<void> {
       VALUES (${session.client_reference_id}, ${customer}, ${subscriptionId}, 'active', now(), ${event.created})
       ON CONFLICT (user_id) DO UPDATE SET customer_id = EXCLUDED.customer_id, subscription_id = EXCLUDED.subscription_id, status = 'active', updated_at = now(), event_created = EXCLUDED.event_created
       WHERE equidy_subscriptions.event_created <= EXCLUDED.event_created`;
-    if (existing?.subscription_id && subscriptionId && existing.subscription_id !== subscriptionId && !ENDED_STATUSES.includes(existing.status)) {
-      await cancelSubscription(await stripeClient(), existing.subscription_id); // the new purchase replaces the old one
+    if (subscriptionId) {
+      // The new purchase replaces any other live subscription. Ask Stripe rather than trusting the stored row: after a
+      // failed cancel the row already holds the new id, so a retried webhook could not otherwise find the old one.
+      const stripe = await stripeClient();
+      const stale = new Set<string>();
+      if (existing?.subscription_id && existing.subscription_id !== subscriptionId && !ENDED_STATUSES.includes(existing.status)) stale.add(existing.subscription_id);
+      const listed = await stripe.subscriptions.list({ customer, status: "all", limit: 100 });
+      for (const sub of listed.data) if (sub.id !== subscriptionId && !ENDED_STATUSES.includes(sub.status)) stale.add(sub.id);
+      for (const id of stale) await cancelSubscription(stripe, id);
     }
   } else if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
     const subscription = event.data.object;
