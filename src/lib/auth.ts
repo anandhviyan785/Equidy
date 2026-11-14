@@ -100,9 +100,16 @@ export async function signOut() {
 
 /** Permanently deletes the account and clears this browser's Equidy data. */
 export async function deleteAccount() {
-  const wasClerk = useAuth.getState().user?.provider === "clerk";
+  const current = useAuth.getState().user;
+  const wasClerk = current?.provider === "clerk";
   const res = await fetch("/api/auth/delete", { method: "POST", credentials: "same-origin" }).catch(() => null);
   if (!res) throw new Error("We couldn't reach the server, so your account was not deleted. Check your connection and try again.");
+  // A 401 only means "nothing to delete" for the local demo user. For a real
+  // account it can mean the session was already revoked by a half-finished
+  // delete, so surface it instead of reporting a false success.
+  if (res.status === 401 && !current?.demo) {
+    throw new Error("Your session has expired, so we couldn't confirm your account was deleted. Please sign in again and retry.");
+  }
   if (!res.ok && res.status !== 401) {
     const j = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(j.error || "We couldn't delete your account. Please try again.");
