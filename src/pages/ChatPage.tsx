@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
-import { ArrowUp, Square, Copy, Check, RotateCcw, Apple, Percent, PieChart, Scale, Activity, ShieldAlert, Cpu, WifiOff } from "lucide-react";
+import { ArrowUp, Square, Mic, Copy, Check, RotateCcw, Apple, Percent, PieChart, Scale, Activity, ShieldAlert, Cpu, WifiOff } from "lucide-react";
 import { useChats, type ChatMessage } from "@/store";
 import { regenerate, send, startConversation, stop, useRuns } from "@/lib/chatRunner";
 import { aiStatus, type AIStatus } from "@/lib/ai";
@@ -8,6 +8,7 @@ import { Markdown } from "@/components/Markdown";
 import { Logo } from "@/components/ui";
 import { useMediaQuery } from "@/hooks";
 import { cn } from "@/lib/format";
+import { useSpeechInput } from "@/lib/speech";
 
 const SUGGESTIONS = [
   { icon: Apple, title: "Analyze Apple's financial performance", hint: "Revenue, margins, cash flow and valuation" },
@@ -201,21 +202,25 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
     el.style.height = Math.min(el.scrollHeight, 220) + "px";
   }, [text]);
 
+  const voice = useSpeechInput(setText);
+
   const go = () => {
     const t = text.trim();
     if (!t || streaming) return;
+    voice.stop();
     onSubmit(t);
     setText("");
   };
 
   return (
     // The large (home, desktop) box puts the send button on its own row; the compact box keeps it beside the text.
+    <>
     <div className={cn("card relative flex shadow-[0_8px_30px_rgb(0_0_0/0.12)] transition focus-within:border-accent/50", large ? "flex-col p-3" : "glass items-end gap-1 p-1.5 pl-2")}>
       <textarea
         ref={ref}
         rows={1}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => { if (voice.listening) voice.stop(); setText(e.target.value); }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); go(); }
         }}
@@ -225,6 +230,22 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
       />
       <div className={cn("flex shrink-0 items-center", large && "justify-between pl-1 pt-1")}>
         {large && <div className="text-[11px] text-muted">{status && (status.ai ? `Powered by Gemini · ${status.model}` : "Offline analysis engine")}</div>}
+        <div className="flex items-center gap-1">
+        {voice.supported && !streaming && (
+          <button
+            type="button"
+            onClick={() => (voice.listening ? voice.stop() : voice.start(text))}
+            aria-pressed={voice.listening}
+            aria-label={voice.listening ? "Stop voice input" : "Speak your message"}
+            title={voice.listening ? "Stop voice input" : "Speak your message"}
+            className={cn(
+              "grid h-9 w-9 place-items-center rounded-full transition",
+              voice.listening ? "animate-pulse bg-down text-white" : "text-muted hover:bg-elevated hover:text-fg",
+            )}
+          >
+            <Mic className="h-[18px] w-[18px]" />
+          </button>
+        )}
         {streaming ? (
           <button onClick={onStop} className="grid h-9 w-9 place-items-center rounded-full bg-fg text-bg transition hover:opacity-90" aria-label="Stop generating">
             <Square className="h-3.5 w-3.5 fill-current" />
@@ -234,8 +255,11 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
             <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
           </button>
         )}
+        </div>
       </div>
     </div>
+    {voice.error && <p role="alert" className="mt-2 px-2 text-xs text-down">{voice.error}</p>}
+    </>
   );
 }
 
