@@ -20,5 +20,6 @@ export const C = {
 export const FPS = 30;
 export const WIDTH = 1920;
 export const HEIGHT = 1080;
-export const SCENES = { intro: 120, chat: 210, features: 180, steps: 120, outro: 120 } as const;
+// Timed to the voiceover (tools/make_voiceover.py); change both together.
+export const SCENES = { intro: 135, chat: 255, features: 240, steps: 150, outro: 150 } as const;
 export const TOTAL = Object.values(SCENES).reduce((a, b) => a + b, 0);

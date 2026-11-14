@@ -1,15 +1,25 @@
-# Voiceover script (record with a human voice)
+# Voiceover
 
-Direction: low, slow, unhurried. Short sentences, a beat of silence after each full stop. Calm authority, never shouting. Don't speed up.
-Record as one file, **25 s long**, and save it as `public/voiceover.mp3`. Timings below match the scenes.
+`public/voiceover.wav` (31 s) is generated with [Kokoro](https://github.com/thewh1teagle/kokoro-onnx), an open-source text-to-speech model that runs locally. It uses the `am_onyx` voice, pitched down 1.5 semitones and warmed with EQ and compression, over a low sub-bass bed with a hit on each scene cut.
+
+Rebuild it (needs Python with `kokoro-onnx soundfile`, ffmpeg, and the model files from the kokoro-onnx `model-files-v1.0` release):
+
+```bash
+tools/build_audio.sh <python> kokoro-v1.0.int8.onnx voices-v1.0.bin [voice]
+```
+
+## Script
 
 | Time | Scene | Line |
 |---|---|---|
-| 0:00–0:04 | Intro | "Money doesn't wait. Neither should you. Equidy. Your financial intelligence, reimagined." |
-| 0:04–0:11 | Chat | "Ask why your portfolio is down. Get the answer. The working shown. The bull case. The bear case. The risks." |
-| 0:11–0:17 | Features | "Track every holding. Measure your risk against the S&P five hundred. Learn how markets really work." |
-| 0:17–0:21 | Steps | "Three steps. Sign in. Add your holdings. Ask." |
-| 0:21–0:25 | Outro | "Start understanding your money. Equidy. Analysis, not advice." |
+| 0:00–0:04.5 | Intro | "Money doesn't wait. Neither should you." |
+| 0:04.5–0:13 | Chat | "Ask why your portfolio is down. Get the answer, with the working shown. The bull case. The bear case. The risks." |
+| 0:13–0:21 | Features | "Track every holding. Measure your risk against the S&P 500. Learn how markets really work." |
+| 0:21–0:26 | Steps | "Three steps. Sign in. Add your holdings. Ask." |
+| 0:26–0:31 | Outro | "Start understanding your money. Equidy." |
 
-Tips: record in a quiet room, mic close, a pop filter if you have one. Dropping the pitch slightly and a touch of low-end EQ adds weight.
-Then set `voiceover: true` in `src/Root.tsx` (or pass `--props='{"voiceover":true}'` when rendering).
+Scene lengths live in `SCENES` (`src/theme.ts`) and line timings in `tools/make_voiceover.py`; change both together.
+
+## Using a human voice instead
+
+Record the script as one 31 s file (low, slow, a beat after each full stop), timed to the table above, and save it over `public/voiceover.wav`. Render with `--props='{"voiceover":false}'` for a silent cut.

@@ -8,11 +8,11 @@ import { Steps } from "./scenes/Steps";
 
 export type PromoProps = { voiceover: boolean };
 
-/** `voiceover` plays public/voiceover.mp3 (a human recording; see VOICEOVER.md). */
+/** `voiceover` plays public/voiceover.wav: the generated track, or a human recording saved over it (see VOICEOVER.md). */
 export const Promo = ({ voiceover }: PromoProps) => (
   <AbsoluteFill style={{ backgroundColor: C.bg }}>
     <style>{FONT_FACE_CSS}</style>
-    {voiceover && <Audio src={staticFile("voiceover.mp3")} />}
+    {voiceover && <Audio src={staticFile("voiceover.wav")} />}
     <Series>
       <Series.Sequence durationInFrames={SCENES.intro}><Intro /></Series.Sequence>
       <Series.Sequence durationInFrames={SCENES.chat}><Chat /></Series.Sequence>

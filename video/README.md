@@ -1,6 +1,6 @@
 # Equidy promo video (Remotion)
 
-A 25 s, 1920×1080, 30 fps promo built from the landing page copy and Equidy's dark theme.
+A 31 s, 1920×1080, 30 fps promo with a voiceover (see VOICEOVER.md) built from the landing page copy and Equidy's dark theme.
 
 ```bash
 cd video && npm install
