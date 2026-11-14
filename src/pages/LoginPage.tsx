@@ -61,7 +61,7 @@ export function LoginPage() {
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12 animate-fade-up">
           <h1 className="text-balance text-3xl font-semibold tracking-tight">{mode === "Sign in" ? "Welcome back" : "Create your account"}</h1>
           <p className="mt-2 text-[15px] text-muted">
-            {mode === "Sign in" ? "Sign in to your portfolio, markets and AI analyst." : "Start tracking your portfolio and asking Equidy anything about your finances."}
+            {mode === "Sign in" ? "Sign in to your portfolio, markets and analysis with Equidy." : "Start tracking your portfolio and asking Equidy anything about your finances."}
           </p>
 
           {error && (

@@ -49,7 +49,7 @@ export function PortfolioPage() {
         actions={
           <>
             <button className="btn-outline" onClick={() => askEquidy(navigate, "Analyze my investment portfolio")}>
-              Analyze with AI
+              Analyze with Equidy
             </button>
             <button className="btn-primary" onClick={() => setModal({ mode: "add" })}><Plus className="h-4 w-4" /> Add holding</button>
           </>
@@ -57,7 +57,7 @@ export function PortfolioPage() {
       />
 
       {rows.length === 0 ? (
-        <Empty icon={<Briefcase className="h-6 w-6" />} title="No holdings yet" body="Add your first position to see performance, allocation and AI-powered insights." action={<button className="btn-primary" onClick={() => setModal({ mode: "add" })}><Plus className="h-4 w-4" />Add holding</button>} />
+        <Empty icon={<Briefcase className="h-6 w-6" />} title="No holdings yet" body="Add your first position to see performance, allocation and insights from Equidy." action={<button className="btn-primary" onClick={() => setModal({ mode: "add" })}><Plus className="h-4 w-4" />Add holding</button>} />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
