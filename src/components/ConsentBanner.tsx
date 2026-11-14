@@ -11,7 +11,7 @@ export function ConsentBanner() {
     setOpen(false);
   };
   return (
-    <div role="region" aria-label="Analytics choice" className="card glass glass-thick fixed bottom-4 left-4 right-4 z-50 p-4 sm:left-auto sm:max-w-sm">
+    <div role="region" aria-label="Analytics choice" className="card fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4 z-50 p-4 sm:left-auto sm:max-w-sm">
       <p className="text-sm">Can we count which pages are used to improve Equidy? We never collect your portfolio or chats. <Link to="/privacy" className="underline">Privacy Policy</Link></p>
       <div className="mt-3 flex justify-end gap-2">
         <button className="btn-ghost" onClick={() => choose("no")}>No thanks</button>

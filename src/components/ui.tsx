@@ -92,9 +92,9 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   }, [open]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/35" onClick={onClose} />
-      <div ref={ref} role="dialog" aria-modal className="card glass glass-thick relative w-full max-w-md p-5 animate-fade-up">
+      <div ref={ref} role="dialog" aria-modal className="card relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-b-none p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-fade-up sm:rounded-b-[20px] sm:pb-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold">{title}</h2>
           <button className="btn-ghost -mr-2 p-1.5" onClick={onClose} aria-label="Close"><X className="h-4 w-4" /></button>

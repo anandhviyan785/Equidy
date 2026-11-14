@@ -215,7 +215,7 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
   return (
     // The large (home, desktop) box puts the send button on its own row; the compact box keeps it beside the text.
     <>
-    <div className={cn("card relative flex shadow-[0_8px_30px_rgb(0_0_0/0.12)] transition focus-within:border-accent/50", large ? "flex-col p-3" : "glass items-end gap-1 p-1.5 pl-2")}>
+    <div className={cn("card relative flex shadow-[0_8px_30px_rgb(0_0_0/0.12)] transition focus-within:border-accent/50", large ? "flex-col p-3" : "items-end gap-1 p-1.5 pl-2")}>
       <textarea
         ref={ref}
         rows={1}

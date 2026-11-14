@@ -43,10 +43,10 @@ export function SymbolSearch({ onPick, exclude = [], placeholder = "Search ticke
         aria-expanded={open}
       />
       {open && q.trim() && results.length === 0 && (
-        <div className="card glass glass-thick absolute z-30 mt-1.5 w-full px-3.5 py-3 text-sm text-muted">No stocks match "{q.trim()}".</div>
+        <div className="card absolute z-30 mt-1.5 w-full px-3.5 py-3 text-sm text-muted">No stocks match "{q.trim()}".</div>
       )}
       {open && results.length > 0 && (
-        <ul className="card glass glass-thick absolute z-30 mt-1.5 max-h-72 w-full overflow-y-auto p-1">
+        <ul className="card absolute z-30 mt-1.5 max-h-72 w-full overflow-y-auto p-1">
           {results.map((s, i) => {
             const p = prices[s.symbol];
             return (
