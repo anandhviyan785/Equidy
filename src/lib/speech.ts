@@ -62,7 +62,13 @@ export function useSpeechInput(onText: (text: string) => void) {
   const onTextRef = useRef(onText);
   onTextRef.current = onText;
 
-  const stop = useCallback(() => { rec.current?.stop(); }, []);
+  /** Ends listening. `discard` drops any result still in flight, for when the text box is about to be sent or edited by hand. */
+  const stop = useCallback((discard = false) => {
+    const r = rec.current;
+    if (!r) return;
+    if (discard) r.onresult = null;
+    r.stop();
+  }, []);
 
   const start = useCallback((typed: string) => {
     const Ctor = recognitionCtor();

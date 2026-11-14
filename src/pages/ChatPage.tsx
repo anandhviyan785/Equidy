@@ -207,7 +207,7 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
   const go = () => {
     const t = text.trim();
     if (!t || streaming) return;
-    voice.stop();
+    voice.stop(true);
     onSubmit(t);
     setText("");
   };
@@ -220,7 +220,7 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
         ref={ref}
         rows={1}
         value={text}
-        onChange={(e) => { if (voice.listening) voice.stop(); setText(e.target.value); }}
+        onChange={(e) => { if (voice.listening) voice.stop(true); setText(e.target.value); }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); go(); }
         }}
