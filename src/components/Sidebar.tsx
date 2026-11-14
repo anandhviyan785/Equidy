@@ -105,7 +105,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
               onClick={onCloseMobile}
               title={isCollapsed ? n.label : undefined}
               className={({ isActive }) =>
-                cn("flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors", isCollapsed && "justify-center", isActive ? "bg-accent-soft font-semibold text-accent" : "text-muted hover:bg-elevated hover:text-fg")
+                cn("flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors", isCollapsed && "justify-center", isActive ? "bg-elevated text-fg" : "text-muted hover:bg-elevated hover:text-fg")
               }
             >
               <n.icon className="h-[18px] w-[18px] shrink-0" />
@@ -124,7 +124,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
                 <div key={label} className="mb-2">
                   <div className="label px-2.5 pb-1 pt-3">{label === "Today" && !query ? "Recent" : label}</div>
                   {list.map((c) => (
-                    <div key={c.id} className={cn("group relative flex items-center rounded-xl", activeId === c.id ? "bg-accent-soft" : "hover:bg-elevated")}>
+                    <div key={c.id} className={cn("group relative flex items-center rounded-xl", activeId === c.id ? "bg-elevated" : "hover:bg-elevated")}>
                       {editing === c.id ? (
                         <input
                           autoFocus
@@ -180,7 +180,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
             to="/settings"
             onClick={onCloseMobile}
             title={isCollapsed ? "Settings" : undefined}
-            className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors", isCollapsed && "justify-center", isActive ? "bg-accent-soft font-semibold text-accent" : "text-muted hover:bg-elevated hover:text-fg")}
+            className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors", isCollapsed && "justify-center", isActive ? "bg-elevated" : "text-muted hover:bg-elevated hover:text-fg")}
           >
             <Settings className="h-[18px] w-[18px] shrink-0" />
             {!isCollapsed && "Settings"}
@@ -194,7 +194,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
             {avatar ? (
               <img src={avatar} alt="" referrerPolicy="no-referrer" className="h-8 w-8 shrink-0 rounded-full object-cover" />
             ) : (
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent-soft text-xs font-bold text-accent">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent/15 text-xs font-semibold text-accent">
                 {profile.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
               </span>
             )}

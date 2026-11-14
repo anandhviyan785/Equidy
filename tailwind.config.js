@@ -17,8 +17,6 @@ export default {
         fg: "rgb(var(--fg) / <alpha-value>)",
         muted: "rgb(var(--muted) / <alpha-value>)",
         accent: "rgb(var(--accent) / <alpha-value>)",
-        "accent-soft": "rgb(var(--accent-soft) / <alpha-value>)",
-        field: "rgb(var(--field) / <alpha-value>)",
         up: "rgb(var(--up) / <alpha-value>)",
         down: "rgb(var(--down) / <alpha-value>)",
       },

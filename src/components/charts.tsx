@@ -8,10 +8,9 @@ import { useSettings } from "@/store";
 import { useIsDark } from "@/hooks";
 
 // Monochrome brand: categorical slots are grey steps in fixed order (alternating light and dark so neighbours separate). Identity is always backed by a legend or direct label, never by tone alone.
-// Kit Highlight ramp (#006FFD to #EAF2FF) interleaved with Neutral/Dark greys so adjacent slices stay distinct.
-const SERIES_LIGHT = ["#006ffd", "#6fbaff", "#1f2024", "#b4dbff", "#494a50", "#2897ff", "#8f9098", "#d4d6dd"];
-const SERIES_DARK = ["#2897ff", "#b4dbff", "#8f9098", "#006ffd", "#d4d6dd", "#6fbaff", "#494a50", "#eaf2ff"];
-export const OTHER = "#c5c6cc";
+const SERIES_LIGHT = ["#0a0a0a", "#8a8a8a", "#4a4a4a", "#c4c4c4", "#6a6a6a", "#2e2e2e", "#a8a8a8", "#dcdcdc"];
+const SERIES_DARK = ["#f5f5f5", "#6b6b6b", "#b0b0b0", "#3a3a3a", "#8e8e8e", "#d0d0d0", "#525252", "#2a2a2a"];
+export const OTHER = "#8a8a8a";
 
 export function useSeriesColors() {
   return useIsDark() ? SERIES_DARK : SERIES_LIGHT;
