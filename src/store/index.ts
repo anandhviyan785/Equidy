@@ -32,7 +32,7 @@ interface SettingsState {
 export const useSettings = create<SettingsState>()(
   persist(
     (set) => ({
-      theme: "dark",
+      theme: "light",
       currency: "USD",
       riskFree: 0.04,
       liveTicks: true,

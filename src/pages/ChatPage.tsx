@@ -56,7 +56,7 @@ export function ChatPage() {
             key={s.title}
             onClick={() => submit(s.title)}
             style={{ animationDelay: `${80 + i * 40}ms` }}
-            className="card group flex items-start gap-3 p-3.5 text-left transition-colors hover:border-accent/40 hover:bg-elevated animate-fade-up"
+            className="group flex items-start gap-3 rounded-2xl bg-elevated p-4 text-left transition-colors hover:bg-accent-soft animate-fade-up"
           >
             <s.icon className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-accent" />
             <span className="min-w-0">
@@ -154,7 +154,7 @@ function Message({ m, streaming, canRegenerate, onRegenerate }: { m: ChatMessage
   if (m.role === "user") {
     return (
       <div className="flex justify-end animate-fade-up">
-        <div className="max-w-[85%] whitespace-pre-wrap rounded-3xl rounded-br-lg bg-elevated px-4 py-2.5 text-[15px] leading-relaxed">{m.content}</div>
+        <div className="max-w-[85%] whitespace-pre-wrap rounded-[20px] rounded-br-md bg-accent px-4 py-3 text-[15px] leading-relaxed text-white">{m.content}</div>
       </div>
     );
   }
@@ -226,11 +226,11 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
       <div className={cn("flex shrink-0 items-center", large && "justify-between pl-1 pt-1")}>
         {large && <div className="text-[11px] text-muted">{status && (status.ai ? `Powered by Gemini · ${status.model}` : "Offline analysis engine")}</div>}
         {streaming ? (
-          <button onClick={onStop} className="grid h-9 w-9 place-items-center rounded-full bg-fg text-bg transition hover:opacity-90" aria-label="Stop generating">
+          <button onClick={onStop} className="grid h-9 w-9 place-items-center rounded-full bg-accent text-white transition hover:bg-accent/90" aria-label="Stop generating">
             <Square className="h-3.5 w-3.5 fill-current" />
           </button>
         ) : (
-          <button onClick={go} disabled={!text.trim()} className="grid h-9 w-9 place-items-center rounded-full bg-fg text-bg transition hover:bg-fg/85 disabled:bg-line disabled:text-muted" aria-label="Send message">
+          <button onClick={go} disabled={!text.trim()} className="grid h-9 w-9 place-items-center rounded-full bg-accent text-white transition hover:bg-accent/90 disabled:bg-field/50 disabled:text-white" aria-label="Send message">
             <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
           </button>
         )}

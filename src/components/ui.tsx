@@ -35,7 +35,7 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-[34px] font-bold leading-[1.1] tracking-[-0.022em]">{title}</h1>
+        <h1 className="text-[28px] font-extrabold leading-[1.15] tracking-[0.01em]">{title}</h1>
         {subtitle && <p className="mt-1.5 text-[15px] text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -51,7 +51,7 @@ export function Stat({ label, value, sub, className }: { label: string; value: R
   return (
     <div className={cn("card p-4", className)}>
       <div className="label">{label}</div>
-      <div className="num mt-2 text-2xl font-semibold tracking-[-0.02em]">{value}</div>
+      <div className="num mt-2 text-xl font-extrabold">{value}</div>
       {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
     </div>
   );
@@ -59,7 +59,7 @@ export function Stat({ label, value, sub, className }: { label: string; value: R
 
 export function Segmented<T extends string>({ value, options, onChange, size = "sm" }: { value: T; options: readonly T[]; onChange: (v: T) => void; size?: "sm" | "xs" }) {
   return (
-    <div className="inline-flex rounded-[10px] bg-elevated p-0.5">
+    <div className="inline-flex rounded-2xl bg-elevated p-1">
       {options.map((o) => (
         <button
           key={o}
@@ -67,7 +67,7 @@ export function Segmented<T extends string>({ value, options, onChange, size = "
           onClick={() => onChange(o)}
           aria-pressed={value === o}
           className={cn(
-            "seg-btn rounded-lg font-medium transition-colors",
+            "seg-btn rounded-xl font-semibold transition-colors",
             size === "sm" ? "px-3 py-1 text-[13px]" : "px-2.5 py-0.5 text-xs",
             value === o ? "bg-[rgb(var(--seg-selected))] text-fg shadow-sm" : "text-muted hover:text-fg",
           )}
@@ -96,7 +96,7 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
       <div className="absolute inset-0 bg-black/35" onClick={onClose} />
       <div ref={ref} role="dialog" aria-modal className="card glass glass-thick relative w-full max-w-md p-5 animate-fade-up">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">{title}</h2>
+          <h2 className="text-base font-extrabold">{title}</h2>
           <button className="btn-ghost -mr-2 p-1.5" onClick={onClose} aria-label="Close"><X className="h-4 w-4" /></button>
         </div>
         {children}
@@ -108,8 +108,8 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
 export function Empty({ icon, title, body, action }: { icon: ReactNode; title: string; body: string; action?: ReactNode }) {
   return (
     <div className="card flex flex-col items-center px-6 py-14 text-center">
-      <div className="mb-3 rounded-2xl bg-elevated p-3 text-muted">{icon}</div>
-      <div className="font-medium">{title}</div>
+      <div className="mb-4 grid h-24 w-24 place-items-center rounded-full bg-accent-soft text-accent/60">{icon}</div>
+      <div className="text-lg font-extrabold">{title}</div>
       <p className="mt-1 max-w-sm text-sm text-muted">{body}</p>
       {action && <div className="mt-5">{action}</div>}
     </div>
@@ -123,9 +123,9 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={cn("relative h-6 w-10 rounded-full transition-colors", checked ? "bg-accent" : "bg-line")}
+      className={cn("relative h-6 w-[46px] rounded-full transition-colors", checked ? "bg-accent" : "bg-field/60")}
     >
-      <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform", checked ? "translate-x-[18px]" : "translate-x-0.5")} />
+      <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform", checked ? "translate-x-[23px]" : "translate-x-0.5")} />
     </button>
   );
 }

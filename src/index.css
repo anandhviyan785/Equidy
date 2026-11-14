@@ -3,15 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --bg: 245 245 247;
+  /* Mobile Apps Prototyping Kit palette */
+  --bg: 255 255 255;          /* Neutral/Light/Lightest  #FFFFFF */
   --surface: 255 255 255;
-  --elevated: 236 236 240;
-  --line: 226 226 231;
-  --fg: 29 29 31;
-  --muted: 106 106 110;
-  --accent: 29 29 31;
-  --up: 20 120 60;
-  --down: 185 28 28;
+  --elevated: 248 249 254;    /* Neutral/Light/Light     #F8F9FE */
+  --line: 232 233 241;        /* Neutral/Light/Medium    #E8E9F1 */
+  --field: 197 198 204;       /* Neutral/Light/Darkest   #C5C6CC */
+  --fg: 31 32 36;             /* Neutral/Dark/Darkest    #1F2024 */
+  --muted: 113 114 122;       /* Neutral/Dark/Light      #71727A */
+  --accent: 0 111 253;        /* Highlight/Darkest       #006FFD */
+  --accent-soft: 234 242 255; /* Highlight/Lightest      #EAF2FF */
+  --up: 41 130 103;           /* Support/Success/Dark    #298267 */
+  --down: 237 50 65;          /* Support/Error/Dark      #ED3241 */
   --seg-selected: 255 255 255;
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 4px 16px rgb(0 0 0 / 0.04);
   --glass-fill: 255 255 255;
@@ -24,16 +27,18 @@
 }
 
 .dark {
-  --bg: 0 0 0;
-  --surface: 28 28 30;
-  --elevated: 44 44 46;
-  --line: 56 56 58;
-  --fg: 245 245 247;
-  --muted: 152 152 157;
-  --accent: 245 245 247;
-  --up: 48 209 88;
-  --down: 255 105 97;
-  --seg-selected: 99 99 102;
+  --bg: 22 23 26;
+  --surface: 31 32 36;        /* #1F2024 */
+  --elevated: 47 48 54;       /* #2F3036 */
+  --line: 56 57 64;
+  --field: 73 74 80;          /* #494A50 */
+  --fg: 248 249 254;          /* #F8F9FE */
+  --muted: 143 144 152;       /* #8F9098 */
+  --accent: 40 151 255;       /* Highlight/Dark #2897FF */
+  --accent-soft: 24 44 77;
+  --up: 58 192 160;           /* #3AC0A0 */
+  --down: 255 97 109;         /* #FF616D */
+  --seg-selected: 73 74 80;
   --card-shadow: none;
   --glass-fill: 60 60 64;
   --glass-alpha: 0.5;
@@ -61,21 +66,21 @@
 }
 
 @layer components {
-  .card { @apply min-w-0 rounded-[20px] border border-line bg-surface; box-shadow: var(--card-shadow); }
+  .card { @apply min-w-0 rounded-2xl border border-line bg-surface; box-shadow: var(--card-shadow); }
   button.card { transition: background-color 150ms ease-out, border-color 150ms ease-out, transform 100ms ease-out; }
   button.card:active { transform: scale(0.98); }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:pointer-events-none; transition: background-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-[13px] font-semibold disabled:opacity-50 disabled:pointer-events-none; transition: background-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out; }
   .btn:active { transform: scale(0.97); }
-  .btn-primary { @apply btn bg-fg text-bg hover:bg-fg/85; }
-  .btn-ghost { @apply btn text-muted hover:text-fg hover:bg-elevated; }
-  .btn-outline { @apply btn border border-line hover:bg-elevated; }
-  .input { @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm outline-none placeholder:text-muted focus:border-accent/60 focus:ring-2 focus:ring-accent/15 transition; }
-  .label { @apply text-[13px] font-semibold text-muted; }
+  .btn-primary { @apply btn bg-accent text-white hover:bg-accent/90; }
+  .btn-ghost { @apply btn font-medium text-muted hover:text-fg hover:bg-elevated; }
+  .btn-outline { @apply btn border-[1.5px] border-accent text-accent hover:bg-accent-soft; }
+  .input { @apply w-full rounded-xl border border-field bg-surface px-4 py-2 text-sm outline-none placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/15 transition; }
+  .label { @apply text-xs font-bold text-muted; }
   .num { @apply tabular-nums; font-feature-settings: "tnum", "cv11"; }
-  .chip { @apply inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-0.5 text-xs text-muted; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent; }
 }
 
-.prose-equidy { @apply prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-accent prose-strong:text-fg prose-code:before:content-none prose-code:after:content-none; }
+.prose-equidy { @apply prose prose-sm max-w-none dark:prose-invert prose-headings:font-extrabold prose-headings:tracking-tight prose-a:text-accent prose-strong:text-fg prose-code:before:content-none prose-code:after:content-none; }
 .prose-equidy table { @apply text-xs; }
 .prose-equidy th, .prose-equidy td { @apply px-3 py-1.5; }
 .prose-equidy thead { @apply border-line; }

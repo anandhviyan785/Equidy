@@ -56,10 +56,13 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-full flex-col bg-bg lg:flex-row">
+      <div className="grid h-[28vh] min-h-[160px] shrink-0 place-items-center bg-accent-soft lg:hidden">
+        <Logo compact className="h-14 w-14" />
+      </div>
       <section className="flex flex-1 flex-col px-6 py-8 sm:px-10">
-        <Logo className="self-start" />
-        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12 animate-fade-up">
-          <h1 className="text-balance text-3xl font-semibold tracking-tight">{mode === "Sign in" ? "Welcome back" : "Create your account"}</h1>
+        <Logo className="self-start max-lg:hidden" />
+        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-2 animate-fade-up lg:py-12">
+          <h1 className="text-balance text-2xl font-extrabold tracking-[0.01em]">{mode === "Sign in" ? "Welcome back" : "Create your account"}</h1>
           <p className="mt-2 text-[15px] text-muted">
             {mode === "Sign in" ? "Sign in to your portfolio, markets and AI analyst." : "Start tracking your portfolio and asking Equidy anything about your finances."}
           </p>
@@ -82,12 +85,12 @@ export function LoginPage() {
               {mode === "Create account" && (
                 <div>
                   <label htmlFor="name" className="label mb-1.5 block">Name</label>
-                  <input id="name" className="input h-11" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                  <input id="name" className="input h-12" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
                 </div>
               )}
               <div>
                 <label htmlFor="email" className="label mb-1.5 block">Email</label>
-                <input id="email" type="email" className="input h-11" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <input id="email" type="email" className="input h-12" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div>
                 <label htmlFor="password" className="label mb-1.5 block">Password</label>
@@ -95,7 +98,7 @@ export function LoginPage() {
                   <input
                     id="password"
                     type={showPw ? "text" : "password"}
-                    className="input h-11 pr-11"
+                    className="input h-12 pr-11"
                     autoComplete={mode === "Sign in" ? "current-password" : "new-password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -108,7 +111,7 @@ export function LoginPage() {
                 </div>
                 {mode === "Create account" && <p className="mt-1.5 text-xs text-muted">At least 8 characters.</p>}
               </div>
-              <button className="btn-primary h-11 w-full text-[15px]" disabled={!!busy || !email || !password || (mode === "Create account" && !name)}>
+              <button className="btn-primary h-12 w-full" disabled={!!busy || !email || !password || (mode === "Create account" && !name)}>
                 {busy === "email" && <Loader2 className="h-4 w-4 animate-spin" />}
                 {mode}
               </button>
@@ -126,7 +129,7 @@ export function LoginPage() {
                     key={p}
                     onClick={() => { setBusy(p); startOAuth(p); }}
                     disabled={!!busy}
-                    className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface text-[15px] font-medium transition-colors hover:bg-elevated focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg disabled:opacity-50"
+                    className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-field bg-surface text-sm font-semibold transition-colors hover:border-accent hover:bg-accent-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
                   >
                     {busy === p ? <Loader2 className="h-5 w-5 animate-spin" /> : <ProviderIcon p={p} />}
                     Continue with {providerLabel(p)}
@@ -137,15 +140,15 @@ export function LoginPage() {
           )}
 
           {nothingConfigured && (
-            <div className="mt-8 flex gap-2.5 rounded-xl border border-line bg-elevated/60 px-3.5 py-3 text-sm leading-relaxed text-muted">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="mt-8 flex gap-2.5 rounded-2xl bg-accent-soft px-4 py-3 text-sm leading-relaxed text-muted">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
               <span>Sign-in isn't available yet. Please check back soon.</span>
             </div>
           )}
 
           {info && !info.online && (
             <>
-              <button onClick={() => { demoSignIn(); navigate("/", { replace: true }); }} className="btn-primary mt-8 h-11 w-full text-[15px]">
+              <button onClick={() => { demoSignIn(); navigate("/", { replace: true }); }} className="btn-primary mt-8 h-12 w-full">
                 Explore the demo
               </button>
               <p className="mt-3 text-xs leading-relaxed text-muted">This preview has no Equidy server, so accounts are unavailable here. The demo keeps everything in this browser.</p>
@@ -166,18 +169,18 @@ function MarketPanel() {
   const prices = useMarket((s) => s.prices);
   const rows = INDICES.slice(0, 4);
   return (
-    <aside className="relative hidden flex-1 overflow-hidden border-l border-line bg-surface lg:flex lg:flex-col lg:justify-center lg:px-14">
+    <aside className="relative hidden flex-1 overflow-hidden bg-accent-soft lg:flex lg:flex-col lg:justify-center lg:px-14">
       <div className="max-w-md">
         <div className="label">Markets now</div>
-        <p className="mt-3 text-balance text-4xl font-semibold leading-tight tracking-tight">Your financial intelligence, reimagined.</p>
-        <div className="mt-10 divide-y divide-line rounded-2xl border border-line bg-bg">
+        <p className="mt-3 text-balance text-4xl font-extrabold leading-tight">Your financial intelligence, reimagined.</p>
+        <div className="mt-10 divide-y divide-line rounded-2xl bg-surface shadow-sm">
           {rows.map((i) => {
             const p = prices[i.symbol];
             const spark = history(i.symbol, i.price, i.vol, i.drift, 1).slice(-40, -1).map((b) => b.close);
             return (
               <div key={i.symbol} className="flex items-center gap-4 px-5 py-4">
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium">{i.name}</div>
+                  <div className="text-sm font-bold">{i.name}</div>
                   <div className="num text-xs text-muted">{price(p.price)}</div>
                 </div>
                 <Sparkline data={[...spark, p.price]} width={96} height={28} />
