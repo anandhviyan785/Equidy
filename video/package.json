@@ -7,7 +7,8 @@
     "studio": "remotion studio src/index.ts",
     "render": "remotion render src/index.ts EquidyPromo out/equidy-promo.mp4",
     "still": "remotion still src/index.ts EquidyPromo out/still.png",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "posts": "tools/render_posts.sh"
   },
   "dependencies": {
     "@remotion/cli": "4.0.290",
