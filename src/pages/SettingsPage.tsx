@@ -60,14 +60,14 @@ export function SettingsPage() {
           <Row label="Theme">
             <div className="inline-flex rounded-xl border border-line p-0.5">
               {themes.map((t) => (
-                <button key={t.v} onClick={() => s.set({ theme: t.v })} className={cn("flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-xs font-medium", s.theme === t.v ? "bg-elevated text-fg" : "text-muted hover:text-fg")}>
+                <button key={t.v} type="button" aria-pressed={s.theme === t.v} onClick={() => s.set({ theme: t.v })} className={cn("flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-xs font-medium", s.theme === t.v ? "bg-elevated text-fg" : "text-muted hover:text-fg")}>
                   <t.icon className="h-3.5 w-3.5" /> {t.label}
                 </button>
               ))}
             </div>
           </Row>
           <Row label="Display currency" hint="Values are converted at fixed reference rates.">
-            <select className="input h-9 w-28" value={s.currency} onChange={(e) => s.set({ currency: e.target.value })}>
+            <select aria-label="Display currency" className="input h-9 w-28" value={s.currency} onChange={(e) => s.set({ currency: e.target.value })}>
               {["USD", "EUR", "GBP", "INR", "JPY"].map((c) => <option key={c}>{c}</option>)}
             </select>
           </Row>
@@ -112,7 +112,7 @@ export function SettingsPage() {
         <Section title="Analytics">
           <Row label="Risk-free rate" hint="Used for Sharpe, Sortino and alpha.">
             <div className="relative w-28">
-              <input type="number" step={0.25} className="input num h-9 pr-8" value={+(s.riskFree * 100).toFixed(2)} onChange={(e) => s.set({ riskFree: Math.max(0, Number(e.target.value)) / 100 })} />
+              <input type="number" aria-label="Risk-free rate (percent)" step={0.25} className="input num h-9 pr-8" value={+(s.riskFree * 100).toFixed(2)} onChange={(e) => s.set({ riskFree: Math.max(0, Number(e.target.value)) / 100 })} />
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">%</span>
             </div>
           </Row>
