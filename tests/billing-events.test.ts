@@ -5,6 +5,7 @@ let listed: { id: string; status: string }[] = [];
 const list = vi.fn(async () => ({ data: listed }));
 let storedRow: Record<string, unknown> | null = null;
 const queries: string[] = [];
+let deletedAt: number | null = null;
 
 vi.mock("stripe", () => ({ default: class { subscriptions = { cancel, list }; } }));
 vi.mock("../server/db", () => ({
@@ -13,6 +14,7 @@ vi.mock("../server/db", () => ({
     const text = strings.join("?");
     queries.push(text);
     if (text.includes("SELECT customer_id")) return storedRow ? [storedRow] : [];
+    if (text.includes("equidy_deleted_users") && text.includes("SELECT")) return deletedAt === null ? [] : [{ deleted_at: deletedAt }];
     return [];
   },
 }));
@@ -20,7 +22,7 @@ vi.mock("../server/db", () => ({
 const checkout = (sub: string, created: number) => ({
   type: "checkout.session.completed",
   created,
-  data: { object: { client_reference_id: "u1", customer: "cus_1", subscription: sub, mode: "subscription", payment_status: "paid" } },
+  data: { object: { created, client_reference_id: "u1", customer: "cus_1", subscription: sub, mode: "subscription", payment_status: "paid" } },
 }) as never;
 
 describe("applyStripeEvent checkout ordering", () => {
@@ -29,6 +31,7 @@ describe("applyStripeEvent checkout ordering", () => {
     list.mockClear();
     listed = [];
     queries.length = 0;
+    deletedAt = null;
     process.env.STRIPE_SECRET_KEY = "sk_test_x";
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_x";
     process.env.STRIPE_PRICE_ID = "price_x";
@@ -57,5 +60,14 @@ describe("applyStripeEvent checkout ordering", () => {
     await applyStripeEvent(checkout("sub_B", 200));
     expect(cancel).toHaveBeenCalledWith("sub_A");
     expect(cancel).not.toHaveBeenCalledWith("sub_B");
+  });
+
+  it("cancels the new subscription and records nothing when the account was deleted before the webhook arrived", async () => {
+    storedRow = null;
+    deletedAt = 150_000; // after the checkout session was created (created = 100s)
+    const { applyStripeEvent } = await import("../server/billing");
+    await applyStripeEvent(checkout("sub_A", 100));
+    expect(cancel).toHaveBeenCalledWith("sub_A");
+    expect(queries.some((q) => q.includes("INSERT INTO equidy_subscriptions"))).toBe(false);
   });
 });

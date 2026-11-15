@@ -4,6 +4,7 @@ import { requireUser, type SessionUser } from "./auth.js";
 import { db, dbEnabled } from "./db.js";
 import { appUrl, getEnv } from "./env.js";
 import { reportError } from "./monitoring.js";
+import { wasDeletedSince } from "./tombstones.js";
 
 // Stripe subscriptions. Optional: needs STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID and a database.
 // Payment details only ever go to Stripe's hosted pages, never through this server.
@@ -68,6 +69,11 @@ export async function applyStripeEvent(event: Stripe.Event): Promise<void> {
     if (!session.client_reference_id || !customer) return;
     if (session.mode !== "subscription" || session.payment_status !== "paid") return;
     const subscriptionId = idOf(session.subscription);
+    // Paid, then deleted the account before this webhook arrived: end the subscription instead of recording it.
+    if (await wasDeletedSince(session.client_reference_id, (session.created ?? event.created) * 1000)) {
+      if (subscriptionId) await cancelSubscription(await stripeClient(), subscriptionId);
+      return;
+    }
     const existing = await findSubscription(session.client_reference_id);
     if (existing && Number(existing.event_created ?? 0) > event.created) return; // a replayed older event must not touch newer state
     await ensureTable();

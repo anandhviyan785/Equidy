@@ -30,3 +30,11 @@ export async function isSessionRevoked(userId: string, issuedAt: number): Promis
   const rows = (await db()`SELECT deleted_at FROM equidy_deleted_users WHERE user_id = ${userId}`) as { deleted_at: number | string }[];
   return rows.length > 0 && issuedAt <= Number(rows[0].deleted_at);
 }
+
+/** True when the user deleted their account at or after `sinceMs` (epoch milliseconds). */
+export async function wasDeletedSince(userId: string, sinceMs: number): Promise<boolean> {
+  if (!dbEnabled()) return false;
+  await ensureTable();
+  const rows = (await db()`SELECT deleted_at FROM equidy_deleted_users WHERE user_id = ${userId}`) as { deleted_at: number | string }[];
+  return rows.length > 0 && Number(rows[0].deleted_at) >= sinceMs;
+}
