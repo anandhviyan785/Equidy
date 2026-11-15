@@ -108,6 +108,9 @@ export async function deleteAccount() {
   // account it can mean the session was already revoked by a half-finished
   // delete, so surface it instead of reporting a false success.
   if (res.status === 401 && !current?.demo) {
+    // The session is dead either way, so don't leave the UI looking signed in while every request fails.
+    useAuth.getState().setUser(null);
+    endClerkSession(wasClerk);
     throw new Error("Your session has expired, so we couldn't confirm your account was deleted. Please sign in again and retry.");
   }
   if (!res.ok && res.status !== 401) {
