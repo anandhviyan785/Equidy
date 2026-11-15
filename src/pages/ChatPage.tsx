@@ -203,6 +203,9 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
   }, [text]);
 
   const voice = useSpeechInput(setText);
+  const { stop: stopVoice } = voice;
+  // The mic button is hidden while a reply streams, so dictation must not keep running unseen.
+  useEffect(() => { if (streaming) stopVoice(true); }, [streaming, stopVoice]);
 
   const go = () => {
     const t = text.trim();
