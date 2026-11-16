@@ -13,8 +13,7 @@ export interface Services {
 
 export interface AIStatus {
   online: boolean; // backend reachable
-  ai: boolean; // Gemini configured
-  model?: string;
+  ai: boolean; // AI service configured
   services?: Services;
 }
 
@@ -24,7 +23,7 @@ export function aiStatus(refresh = false): Promise<AIStatus> {
   if (!statusPromise || refresh) {
     statusPromise = fetch("/api/health", { signal: AbortSignal.timeout(2500) })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((j) => ({ online: true, ai: !!j.ai, model: j.model, services: j.services as Services | undefined }))
+      .then((j) => ({ online: true, ai: !!j.ai, services: j.services as Services | undefined }))
       .catch(() => ({ online: false, ai: false }));
   }
   return statusPromise;
@@ -36,8 +35,8 @@ export interface StreamArgs {
   signal?: AbortSignal;
 }
 
-/** Streams an answer from Gemini via the backend, or from the offline engine if Gemini is unavailable. */
-export async function streamChat({ history, onDelta, signal }: StreamArgs): Promise<"gemini" | "offline"> {
+/** Streams an answer from the backend AI service, or from the offline engine if unavailable. */
+export async function streamChat({ history, onDelta, signal }: StreamArgs): Promise<"ai" | "offline"> {
   const snap = buildSnapshot();
   const last = history[history.length - 1]?.content ?? "";
   const status = await aiStatus();
@@ -56,7 +55,7 @@ export async function streamChat({ history, onDelta, signal }: StreamArgs): Prom
     });
     if (res?.ok && res.body) {
       await readSSE(res.body, onDelta, signal);
-      return "gemini";
+      return "ai";
     }
     if (res && res.status !== 503) {
       const msg = await res.text().catch(() => "");
@@ -102,7 +101,7 @@ function safeError(raw: string) {
   }
 }
 
-/** Asks Gemini (through the server) for a summary title; null when Gemini isn't available. */
+/** Asks the server AI service for a summary title; null when unavailable. */
 export async function aiTitle(messages: { role: "user" | "assistant"; content: string }[]): Promise<string | null> {
   const status = await aiStatus();
   if (!status.ai) return null;
