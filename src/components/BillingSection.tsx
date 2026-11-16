@@ -21,6 +21,7 @@ export function BillingSection() {
 
   if (!billing?.enabled) return null;
   const subscribed = ACTIVE.includes(billing.status ?? "");
+  const inTrial = billing.status === "trialing";
 
   const open = async () => {
     setBusy(true);
@@ -40,11 +41,11 @@ export function BillingSection() {
   return (
     <section className="card p-5">
       <h2 className="font-medium">Plan</h2>
-      <p className="mt-0.5 text-sm text-muted">{subscribed ? "Your subscription is active." : "Upgrade through Stripe's secure checkout."}</p>
+      <p className="mt-0.5 text-sm text-muted">{subscribed ? (inTrial ? "Your 7-day free trial is active." : "Your subscription is active.") : "7 days free, then $2.99 USD per month. Cancel before the trial ends to avoid a charge."}</p>
       {error && <p role="alert" className="mt-3 text-sm text-down">{error}</p>}
       <button className="btn-primary mt-4" onClick={() => void open()} disabled={busy}>
         {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-        {subscribed ? "Manage subscription" : "Upgrade"}
+        {subscribed ? "Manage subscription" : "Start free trial"}
       </button>
     </section>
   );
