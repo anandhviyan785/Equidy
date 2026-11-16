@@ -142,7 +142,7 @@ export function ChatPage() {
 function StatusBadge({ status }: { status: AIStatus | null }) {
   if (!status) return null;
   return status.ai ? (
-    <span className="chip"><Cpu className="h-3 w-3 text-accent" /> Gemini · {status.model}</span>
+    <span className="chip"><Cpu className="h-3 w-3 text-accent" /> AI assistant</span>
   ) : (
     <span className="chip" title="The AI service is currently unavailable">
       <WifiOff className="h-3 w-3" /> Offline engine
