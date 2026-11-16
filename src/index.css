@@ -110,21 +110,3 @@
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .mobile-glass-tabbar {
-    background: rgb(var(--surface));
-    border-color: rgb(var(--line));
-    box-shadow: 0 3px 10px rgb(0 0 0 / 0.14);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-}
-
-@media (prefers-contrast: more) {
-  .mobile-glass-tabbar {
-    background: rgb(var(--surface));
-    border-color: rgb(var(--fg));
-    box-shadow: 0 0 0 1px rgb(var(--fg) / 0.55);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-}
