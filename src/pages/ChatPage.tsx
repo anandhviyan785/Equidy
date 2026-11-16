@@ -19,6 +19,13 @@ const SUGGESTIONS = [
   { icon: ShieldAlert, title: "How risky is my portfolio?", hint: "Volatility, beta, drawdown and VaR" },
 ];
 
+const MOBILE_SUGGESTIONS = [
+  { icon: Apple, title: "Analyze a company" },
+  { icon: PieChart, title: "Review my portfolio" },
+  { icon: Scale, title: "Compare two companies" },
+  { icon: Activity, title: "Learn about today's market" },
+];
+
 function useAIStatus() {
   const [s, setS] = useState<AIStatus | null>(null);
   useEffect(() => { aiStatus().then(setS); }, []);
@@ -51,22 +58,37 @@ export function ChatPage() {
 
   if (!conv) {
     const suggestions = (
-      <div className="mt-6 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-        {SUGGESTIONS.map((s, i) => (
-          <button
-            key={s.title}
-            onClick={() => submit(s.title)}
-            style={{ animationDelay: `${80 + i * 40}ms` }}
-            className="card group flex items-start gap-3 p-3.5 text-left transition-colors hover:border-accent/40 hover:bg-elevated animate-fade-up"
-          >
-            <s.icon className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-accent" />
-            <span className="min-w-0">
-              <span className="block text-sm font-medium leading-snug">{s.title}</span>
-              <span className="mt-0.5 block text-xs text-muted max-sm:hidden">{s.hint}</span>
-            </span>
-          </button>
-        ))}
-      </div>
+      <>
+        <div className="mt-6 hidden gap-2.5 sm:grid-cols-2 lg:grid">
+          {SUGGESTIONS.map((s, i) => (
+            <button
+              key={s.title}
+              onClick={() => submit(s.title)}
+              style={{ animationDelay: `${80 + i * 40}ms` }}
+              className="card group flex items-start gap-3 p-3.5 text-left transition-colors hover:border-accent/40 hover:bg-elevated animate-fade-up"
+            >
+              <s.icon className="mt-0.5 h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-accent" />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium leading-snug">{s.title}</span>
+                <span className="mt-0.5 block text-xs text-muted max-sm:hidden">{s.hint}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="mt-5 grid gap-1 lg:hidden">
+          {MOBILE_SUGGESTIONS.map(({ icon: Icon, title }, i) => (
+            <button
+              key={title}
+              onClick={() => submit(title)}
+              style={{ animationDelay: `${80 + i * 40}ms` }}
+              className="flex min-h-12 w-full items-center gap-5 rounded-xl px-4 py-2.5 text-left text-[15px] text-muted transition-colors hover:bg-elevated animate-fade-up"
+            >
+              <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <span>{title}</span>
+            </button>
+          ))}
+        </div>
+      </>
     );
     return (
       <div className="flex h-full flex-col">
