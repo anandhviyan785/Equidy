@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
-import { MobileTabBar } from "./MobileTabBar";
 import { Logo } from "./ui";
 import { TickerTape } from "./TickerTape";
 import { ConsentBanner } from "./ConsentBanner";
