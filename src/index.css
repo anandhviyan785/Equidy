@@ -98,6 +98,8 @@
 @media (prefers-reduced-motion: no-preference) { #root { scroll-behavior: smooth; } }
 @media (prefers-reduced-motion: reduce) { [data-reveal] { opacity: 1; transform: none; transition: none; } }
 
+.mobile-glass-tabbar { bottom: calc(env(safe-area-inset-bottom) + 0.75rem); }
+
 /* Liquid Glass: floating controls only (ticker, composer, popovers, dialogs, the phone menu). Never on cards or other content. */
 .glass, .glass-drawer {
   background-color: rgb(var(--glass-fill) / var(--glass-alpha));
