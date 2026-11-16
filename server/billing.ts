@@ -6,11 +6,11 @@ import { appUrl, getEnv } from "./env.js";
 import { reportError } from "./monitoring.js";
 import { wasDeletedSince } from "./tombstones.js";
 
-// Stripe subscriptions. Optional: needs STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID and a database.
+// Stripe subscriptions. Optional: needs STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and a database.
 // Payment details only ever go to Stripe's hosted pages, never through this server.
 // Nothing in the app is locked behind a plan yet.
 
-export const billingEnabled = () => !!(getEnv("STRIPE_SECRET_KEY") && getEnv("STRIPE_WEBHOOK_SECRET") && getEnv("STRIPE_PRICE_ID") && dbEnabled());
+export const billingEnabled = () => !!(getEnv("STRIPE_SECRET_KEY") && getEnv("STRIPE_WEBHOOK_SECRET") && dbEnabled());
 
 async function stripeClient(): Promise<Stripe> {
   const { default: StripeSdk } = await import("stripe");
@@ -67,8 +67,9 @@ export async function applyStripeEvent(event: Stripe.Event): Promise<void> {
     const session = event.data.object;
     const customer = idOf(session.customer);
     if (!session.client_reference_id || !customer) return;
-    if (session.mode !== "subscription" || session.payment_status !== "paid") return;
+    if (session.mode !== "subscription" || (session.payment_status !== "paid" && session.payment_status !== "no_payment_required")) return;
     const subscriptionId = idOf(session.subscription);
+    const subscriptionStatus = session.payment_status === "paid" ? "active" : "trialing";
     // Paid, then deleted the account before this webhook arrived: end the subscription instead of recording it.
     if (await wasDeletedSince(session.client_reference_id, (session.created ?? event.created) * 1000)) {
       if (subscriptionId) await cancelSubscription(await stripeClient(), subscriptionId);
@@ -80,8 +81,8 @@ export async function applyStripeEvent(event: Stripe.Event): Promise<void> {
     // Save the new subscription first, so a late "deleted" event for the old one can no longer match this row.
     await db()`
       INSERT INTO equidy_subscriptions (user_id, customer_id, subscription_id, status, updated_at, event_created)
-      VALUES (${session.client_reference_id}, ${customer}, ${subscriptionId}, 'active', now(), ${event.created})
-      ON CONFLICT (user_id) DO UPDATE SET customer_id = EXCLUDED.customer_id, subscription_id = EXCLUDED.subscription_id, status = 'active', updated_at = now(), event_created = EXCLUDED.event_created
+      VALUES (${session.client_reference_id}, ${customer}, ${subscriptionId}, ${subscriptionStatus}, now(), ${event.created})
+      ON CONFLICT (user_id) DO UPDATE SET customer_id = EXCLUDED.customer_id, subscription_id = EXCLUDED.subscription_id, status = EXCLUDED.status, updated_at = now(), event_created = EXCLUDED.event_created
       WHERE equidy_subscriptions.event_created <= EXCLUDED.event_created`;
     if (subscriptionId) {
       // The new purchase replaces any other live subscription. Ask Stripe rather than trusting the stored row: after a
@@ -169,7 +170,19 @@ billingRouter.post("/checkout", signedIn, async (_req, res) => {
     const stripe = await stripeClient();
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price: getEnv("STRIPE_PRICE_ID") as string, quantity: 1 }],
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          product_data: { name: "Equidy Plus", description: "7-day free trial, then $2.99 USD per month." },
+          recurring: { interval: "month" },
+          unit_amount: 299,
+        },
+        quantity: 1,
+      }],
+      subscription_data: {
+        trial_period_days: 7,
+        trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+      },
       client_reference_id: user.id,
       ...(existing ? { customer: existing.customer_id } : user.email ? { customer_email: user.email } : {}),
       success_url: `${appUrl()}/settings?billing=success`,
