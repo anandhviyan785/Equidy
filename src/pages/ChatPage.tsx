@@ -144,7 +144,7 @@ function StatusBadge({ status }: { status: AIStatus | null }) {
   return status.ai ? (
     <span className="chip"><Cpu className="h-3 w-3 text-accent" /> Gemini · {status.model}</span>
   ) : (
-    <span className="chip" title="Set GEMINI_API_KEY on the server to enable Gemini">
+    <span className="chip" title="The AI service is currently unavailable">
       <WifiOff className="h-3 w-3" /> Offline engine
     </span>
   );
@@ -232,7 +232,7 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
         aria-label="Message Equidy"
       />
       <div className={cn("flex shrink-0 items-center", large && "justify-between pl-1 pt-1")}>
-        {large && <div className="text-[11px] text-muted">{status && (status.ai ? `Powered by Gemini · ${status.model}` : "Offline analysis engine")}</div>}
+        {large && <div className="text-[11px] text-muted">{status && (status.ai ? `Powered by AI assistant` : "Offline analysis engine")}</div>}
         <div className="flex items-center gap-1">
         {voice.supported && !streaming && (
           <button
@@ -280,4 +280,4 @@ function AiDisclaimer() {
   );
 }
 
-const SOURCE_LABEL: Record<string, string> = { gemini: "Gemini", openai: "OpenAI", claude: "Claude", offline: "Offline engine" };
+const SOURCE_LABEL: Record<string, string> = { ai: "AI assistant", offline: "Offline engine" };
