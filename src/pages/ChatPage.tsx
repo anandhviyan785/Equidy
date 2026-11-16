@@ -231,8 +231,7 @@ function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t
         className={cn("w-full resize-none bg-transparent px-2 leading-relaxed outline-none placeholder:text-muted", large ? "min-h-[56px] py-2 text-base" : "self-center py-1.5 text-[15px]")}
         aria-label="Message Equidy"
       />
-      <div className={cn("flex shrink-0 items-center", large && "justify-between pl-1 pt-1")}>
-        {large && <div className="text-[11px] text-muted">{status && (status.ai ? `Powered by AI assistant` : "Offline analysis engine")}</div>}
+      <div className={cn("flex shrink-0 items-center", large && "justify-end pl-1 pt-1")}>
         <div className="flex items-center gap-1">
         {voice.supported && !streaming && (
           <button
