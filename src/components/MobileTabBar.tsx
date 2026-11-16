@@ -31,7 +31,7 @@ export function MobileTabBar() {
   return (
     <>
       {open && <button className="fixed inset-0 z-40 bg-black/10 lg:hidden" aria-label="Close navigation menu" onClick={() => setOpen(false)} />}
-      <nav className="mobile-glass-tabbar glass fixed inset-x-3 z-50 flex items-stretch gap-1 rounded-[26px] border px-1.5 py-1.5 lg:hidden" aria-label="Main navigation">
+      <nav className="mobile-glass-tabbar fixed inset-x-3 z-50 flex items-stretch gap-1 rounded-[26px] border px-1.5 py-1.5 lg:hidden" aria-label="Main navigation">
         {TABS.map(({ to, label, icon: Icon }) => (
           <NavLink key={to} to={to} end={to === "/"} aria-label={label}
             className={({ isActive }) => cn("flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[19px] px-1 py-1.5 text-[10px] leading-tight transition-colors", (isActive && to !== "/" || to === "/" && (location.pathname === "/" || location.pathname.startsWith("/c/"))) ? "bg-fg/10 text-fg" : "text-muted hover:bg-fg/5")}>
@@ -44,7 +44,7 @@ export function MobileTabBar() {
             <MoreHorizontal className="h-[18px] w-[18px]" /><span>More</span>
           </button>
           {open && (
-            <div role="menu" className="glass absolute bottom-[calc(100%+0.65rem)] right-0 z-[60] max-h-[min(70vh,32rem)] w-72 overflow-y-auto rounded-3xl border border-line p-2 shadow-2xl">
+            <div role="menu" className="card absolute bottom-[calc(100%+0.65rem)] right-0 z-[60] max-h-[min(70vh,32rem)] w-72 overflow-y-auto rounded-3xl border border-line p-2 shadow-2xl">
               <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted">Sections</p>
               {MORE.map(({ to, label, icon: Icon }) => (
                 <NavLink key={to} to={to} role="menuitem" onClick={() => setOpen(false)}

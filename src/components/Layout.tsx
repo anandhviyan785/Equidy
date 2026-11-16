@@ -55,11 +55,6 @@ export function Layout() {
     <div className="flex h-full overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} mobileOpen={false} onCloseMobile={() => {}} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-line px-3 lg:hidden">
-          <div className="w-9" aria-hidden="true" />
-          <Logo compact />
-          <button className="btn-ghost p-2" onClick={() => navigate("/")} aria-label="New chat"><SquarePen className="h-5 w-5" /></button>
-        </header>
         <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pb-24 lg:pb-0" id="main">
           {!isChat && <TickerTape />}
           <Outlet />
