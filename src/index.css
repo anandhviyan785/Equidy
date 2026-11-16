@@ -35,12 +35,6 @@
   --down: 255 105 97;
   --seg-selected: 99 99 102;
   --card-shadow: none;
-  --glass-fill: 60 60 64;
-  --glass-alpha: 0.5;
-  --glass-edge: 255 255 255;
-  --glass-edge-alpha: 0.24;
-  --glass-sheen: 0.14;
-  --glass-shadow: 0 12px 40px rgb(0 0 0 / 0.55);
   color-scheme: dark;
 }
 
@@ -98,9 +92,6 @@
 @media (prefers-reduced-motion: no-preference) { #root { scroll-behavior: smooth; } }
 @media (prefers-reduced-motion: reduce) { [data-reveal] { opacity: 1; transform: none; transition: none; } }
 
-.mobile-glass-tabbar { bottom: calc(env(safe-area-inset-bottom) + 0.75rem); }
-
-/* Liquid Glass belongs only to the floating phone tab bar. */
 .mobile-glass-tabbar {
   bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
   background-color: rgb(var(--glass-fill) / var(--glass-alpha));
