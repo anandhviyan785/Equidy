@@ -31,16 +31,16 @@ export function MobileNav() {
   return (
     <LiquidGlass
       className="z-50 w-fit px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-auto lg:hidden"
-      displacementScale={24}
-      blurAmount={0.12}
-      saturation={145}
-      aberrationIntensity={1}
+      displacementScale={14}
+      blurAmount={0.04}
+      saturation={130}
+      aberrationIntensity={0}
       elasticity={0}
       cornerRadius={26}
       padding="6px"
       style={{ position: "fixed", left: "50%", top: "calc(100% - 54px)", bottom: "auto", maxWidth: "100%" }}
     >
-      <nav className="relative flex w-[min(calc(100vw-1.5rem),30rem)] items-center justify-around rounded-[22px] border border-white/15 bg-surface/70 p-1.5 shadow-2xl backdrop-blur-xl" aria-label="Main navigation">
+      <nav className="relative flex w-[min(calc(100vw-1.5rem),30rem)] items-center justify-around rounded-[22px] border border-line/70 bg-surface/[0.92] p-1.5 shadow-2xl backdrop-blur-md" aria-label="Main navigation">
         {TABS.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
