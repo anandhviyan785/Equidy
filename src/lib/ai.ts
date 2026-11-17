@@ -17,6 +17,7 @@ export interface AIStatus {
   services?: Services;
 }
 
+const STATUS_RETRY_MS = 15_000;
 let statusPromise: Promise<AIStatus> | null = null;
 
 export function aiStatus(refresh = false): Promise<AIStatus> {
@@ -24,7 +25,11 @@ export function aiStatus(refresh = false): Promise<AIStatus> {
     statusPromise = fetch("/api/health", { signal: AbortSignal.timeout(2500) })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((j) => ({ online: true, ai: !!j.ai, services: j.services as Services | undefined }))
-      .catch(() => ({ online: false, ai: false }));
+      .catch(() => {
+        // Don't pin a transient failure (e.g. a cold start) for the page's lifetime: allow a re-check shortly.
+        setTimeout(() => { statusPromise = null; }, STATUS_RETRY_MS);
+        return { online: false, ai: false };
+      });
   }
   return statusPromise;
 }
