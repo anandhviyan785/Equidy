@@ -6,8 +6,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["-apple-system", "BlinkMacSystemFont", "'SF Pro Text'", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-        mono: ["'SF Mono'", "ui-monospace", "'JetBrains Mono'", "monospace"],
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["'JetBrains Mono'", "ui-monospace", "monospace"],
       },
       colors: {
         bg: "rgb(var(--bg) / <alpha-value>)",

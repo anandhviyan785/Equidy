@@ -55,7 +55,7 @@ export function Layout() {
     <div className="flex h-full overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="material flex h-12 shrink-0 items-center justify-between border-b border-line/60 px-3 lg:hidden">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-line px-3 lg:hidden">
           <Logo compact />
           <button type="button" className="btn-ghost p-2" onClick={() => navigate("/")} aria-label="New chat">
             <SquarePen className="h-5 w-5" />

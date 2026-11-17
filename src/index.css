@@ -2,40 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Apple Store palette: #f5f5f7 canvas, white tiles, #1d1d1f text, #0071e3 action blue. */
 :root {
   --bg: 245 245 247;
   --surface: 255 255 255;
-  --elevated: 232 232 237;
-  --line: 210 210 215;
+  --elevated: 236 236 240;
+  --line: 226 226 231;
   --fg: 29 29 31;
-  --muted: 110 110 115;
-  --accent: 0 113 227;
-  --up: 3 125 80;
-  --down: 215 0 21;
+  --muted: 106 106 110;
+  --accent: 29 29 31;
+  --up: 20 120 60;
+  --down: 185 28 28;
   --seg-selected: 255 255 255;
-  --fill: 118 118 128;
-  --material: 251 251 253;
-  --card-shadow: 2px 4px 12px rgb(0 0 0 / 0.08);
-  --card-shadow-hover: 2px 4px 16px rgb(0 0 0 / 0.16);
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 4px 16px rgb(0 0 0 / 0.04);
   color-scheme: light;
 }
 
 .dark {
   --bg: 0 0 0;
-  --surface: 22 22 23;
+  --surface: 28 28 30;
   --elevated: 44 44 46;
-  --line: 66 66 69;
+  --line: 56 56 58;
   --fg: 245 245 247;
-  --muted: 134 134 139;
-  --accent: 41 151 255;
+  --muted: 152 152 157;
+  --accent: 245 245 247;
   --up: 48 209 88;
-  --down: 255 69 58;
+  --down: 255 105 97;
   --seg-selected: 99 99 102;
-  --fill: 118 118 128;
-  --material: 22 22 23;
   --card-shadow: none;
-  --card-shadow-hover: 0 0 0 1px rgb(255 255 255 / 0.12);
   color-scheme: dark;
 }
 
@@ -46,8 +39,6 @@
   body {
     @apply bg-bg text-fg font-sans antialiased;
     font-feature-settings: "cv11", "ss01";
-    letter-spacing: -0.01em;
-    -webkit-tap-highlight-color: transparent;
   }
   * { @apply border-line; }
   a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; }
@@ -58,17 +49,15 @@
 }
 
 @layer components {
-  .card { @apply min-w-0 rounded-[18px] border border-transparent bg-surface dark:border-line/60; box-shadow: var(--card-shadow); }
-  button.card, a.card { transition: box-shadow 300ms cubic-bezier(0, 0, 0.5, 1), transform 300ms cubic-bezier(0, 0, 0.5, 1); }
-  @media (hover: hover) { button.card:hover, a.card:hover { box-shadow: var(--card-shadow-hover); transform: scale(1.01); } }
+  .card { @apply min-w-0 rounded-[20px] border border-line bg-surface; box-shadow: var(--card-shadow); }
+  button.card { transition: background-color 150ms ease-out, border-color 150ms ease-out, transform 100ms ease-out; }
   button.card:active { transform: scale(0.98); }
   .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:pointer-events-none; transition: background-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out; }
   .btn:active { transform: scale(0.97); }
-  .btn-primary { @apply btn bg-accent text-white hover:bg-accent/90; }
+  .btn-primary { @apply btn bg-fg text-bg hover:bg-fg/85; }
   .btn-ghost { @apply btn text-muted hover:text-fg hover:bg-elevated; }
-  .btn-outline { @apply btn border border-accent text-accent hover:bg-accent hover:text-white; }
-  .material { background: rgb(var(--material) / 0.8); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
-  .input { @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm outline-none placeholder:text-muted focus:border-accent focus:ring-4 focus:ring-accent/20 transition; }
+  .btn-outline { @apply btn border border-line hover:bg-elevated; }
+  .input { @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2 text-sm outline-none placeholder:text-muted focus:border-accent/60 focus:ring-2 focus:ring-accent/15 transition; }
   .label { @apply text-[13px] font-semibold text-muted; }
   .num { @apply tabular-nums; font-feature-settings: "tnum", "cv11"; }
   .chip { @apply inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-0.5 text-xs text-muted; }
