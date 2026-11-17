@@ -105,7 +105,7 @@ export function ChatPage() {
             </div>
             {/* Desktop: the message box sits in the middle of the page. */}
             <div className="max-lg:hidden">
-              <Composer onSubmit={submit} streaming={false} status={status} large />
+              <Composer onSubmit={submit} streaming={false} large />
               <AiDisclaimer />
             </div>
             {suggestions}
@@ -113,7 +113,7 @@ export function ChatPage() {
         </div>
         {/* Phones: the message box is pinned to the bottom, so it never needs scrolling to reach. */}
         <div className="shrink-0 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
-          <Composer onSubmit={submit} streaming={false} status={status} />
+          <Composer onSubmit={submit} streaming={false} />
           <AiDisclaimer />
         </div>
       </div>
@@ -152,7 +152,7 @@ export function ChatPage() {
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg from-[18%] to-transparent to-[42%] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-10">
           <div className="pointer-events-auto mx-auto max-w-3xl">
-            <Composer onSubmit={submit} streaming={!!streamingId} onStop={() => stop(conv.id)} status={status} />
+            <Composer onSubmit={submit} streaming={!!streamingId} onStop={() => stop(conv.id)} />
             <AiDisclaimer />
           </div>
         </div>
@@ -211,7 +211,7 @@ function Message({ m, streaming, canRegenerate, onRegenerate }: { m: ChatMessage
   );
 }
 
-function Composer({ onSubmit, streaming, onStop, status, large }: { onSubmit: (t: string) => void; streaming: boolean; onStop?: () => void; status: AIStatus | null; large?: boolean }) {
+function Composer({ onSubmit, streaming, onStop, large }: { onSubmit: (t: string) => void; streaming: boolean; onStop?: () => void; large?: boolean }) {
   const [text, setText] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
   const narrow = useMediaQuery("(max-width: 640px)");

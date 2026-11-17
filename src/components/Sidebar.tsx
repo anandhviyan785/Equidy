@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { NavLink, useMatch, useNavigate } from "react-router-dom";
 import {
   PanelLeftClose, PanelLeftOpen, SquarePen, Search, Briefcase, BarChart3, LineChart, Star, BookOpen, Settings, MessageSquare,
-  MoreHorizontal, Pin, Pencil, Trash2, X, LogOut,
+  MoreHorizontal, Pin, Pencil, Trash2, LogOut,
 } from "lucide-react";
 import { useAuth, useChats, useSettings } from "@/store";
 import { signOut } from "@/lib/auth";
@@ -27,7 +27,7 @@ function groupLabel(t: number) {
   return "Older";
 }
 
-export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { collapsed: boolean; onToggle: () => void; mobileOpen: boolean; onCloseMobile: () => void }) {
+export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const navigate = useNavigate();
   const activeId = useMatch("/c/:id")?.params.id;
   const conversations = useChats((s) => s.conversations);
@@ -54,19 +54,15 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
 
   const go = (to: string) => {
     navigate(to);
-    onCloseMobile();
   };
 
-  const isCollapsed = collapsed && !mobileOpen;
+  const isCollapsed = collapsed;
 
   return (
-    <>
-      {mobileOpen && <button type="button" aria-label="Close navigation menu" className="fixed inset-0 z-30 bg-black/35 lg:hidden" onClick={onCloseMobile} />}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex flex-col pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] bg-bg border-r transition-[width,transform] duration-300 ease-out lg:static lg:translate-x-0",
+          "hidden h-full shrink-0 flex-col border-r border-line bg-bg pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] lg:flex",
           isCollapsed ? "w-[64px]" : "w-[272px]",
-          mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className={cn("flex h-14 items-center px-3", isCollapsed ? "justify-center" : "justify-between")}>
@@ -74,7 +70,6 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
           <button className="btn-ghost p-2 max-lg:hidden" onClick={onToggle} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
             {collapsed ? <PanelLeftOpen className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
           </button>
-          <button className="btn-ghost p-2 lg:hidden" onClick={onCloseMobile} aria-label="Close menu"><X className="h-[18px] w-[18px]" /></button>
         </div>
 
         <div className="space-y-0.5 px-2">
@@ -102,7 +97,6 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
             <NavLink
               key={n.to}
               to={n.to}
-              onClick={onCloseMobile}
               title={isCollapsed ? n.label : undefined}
               className={({ isActive }) =>
                 cn("flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors", isCollapsed && "justify-center", isActive ? "bg-elevated text-fg" : "text-muted hover:bg-elevated hover:text-fg")
@@ -178,7 +172,6 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
         <div className="border-t border-line p-2">
           <NavLink
             to="/settings"
-            onClick={onCloseMobile}
             title={isCollapsed ? "Settings" : undefined}
             className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors", isCollapsed && "justify-center", isActive ? "bg-elevated" : "text-muted hover:bg-elevated hover:text-fg")}
           >
@@ -187,7 +180,6 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
           </NavLink>
           <NavLink
             to="/profile"
-            onClick={onCloseMobile}
             title={isCollapsed ? profile.name : undefined}
             className={({ isActive }) => cn("mt-0.5 flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-elevated", isCollapsed && "justify-center", isActive && "bg-elevated")}
           >
@@ -206,7 +198,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
             )}
           </NavLink>
           <button
-            onClick={async () => { await signOut(); onCloseMobile(); navigate("/login", { replace: true }); }}
+            onClick={async () => { await signOut(); navigate("/login", { replace: true }); }}
             title="Sign out"
             className={cn("mt-0.5 flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-sm text-muted transition-colors hover:bg-elevated hover:text-fg", isCollapsed && "justify-center")}
           >
@@ -215,7 +207,6 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }: { co
           </button>
         </div>
       </aside>
-    </>
   );
 }
 
