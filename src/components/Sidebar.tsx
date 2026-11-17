@@ -61,7 +61,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
   return (
       <aside
         className={cn(
-          "hidden h-full shrink-0 flex-col border-r border-line bg-bg pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] lg:flex",
+          "material hidden h-full shrink-0 flex-col border-r border-line/60 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] lg:flex",
           isCollapsed ? "w-[64px]" : "w-[272px]",
         )}
       >

@@ -275,7 +275,7 @@ function Composer({ onSubmit, streaming, onStop, large }: { onSubmit: (t: string
             <Square className="h-3.5 w-3.5 fill-current" />
           </button>
         ) : (
-          <button onClick={go} disabled={!text.trim()} className="grid h-9 w-9 place-items-center rounded-full bg-fg text-bg transition hover:bg-fg/85 disabled:bg-line disabled:text-muted" aria-label="Send message">
+          <button onClick={go} disabled={!text.trim()} className="grid h-9 w-9 place-items-center rounded-full bg-accent text-white transition hover:bg-accent/90 disabled:bg-line disabled:text-muted" aria-label="Send message">
             <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
           </button>
         )}

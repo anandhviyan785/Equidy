@@ -35,8 +35,8 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-[34px] font-bold leading-[1.1] tracking-[-0.022em]">{title}</h1>
-        {subtitle && <p className="mt-1.5 text-[15px] text-muted">{subtitle}</p>}
+        <h1 className="text-[34px] font-semibold leading-[1.08] tracking-[-0.025em] sm:text-[40px]">{title}</h1>
+        {subtitle && <p className="mt-2 text-[17px] leading-snug text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -94,7 +94,7 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/35" onClick={onClose} />
-      <div ref={ref} role="dialog" aria-modal className="card relative w-full max-w-md p-5 animate-fade-up">
+      <div ref={ref} role="dialog" aria-modal className="card relative w-full max-w-md rounded-[22px] p-6 animate-fade-up">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold">{title}</h2>
           <button className="btn-ghost -mr-2 p-1.5" onClick={onClose} aria-label="Close"><X className="h-4 w-4" /></button>
@@ -123,9 +123,9 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={cn("relative h-6 w-10 rounded-full transition-colors", checked ? "bg-accent" : "bg-line")}
+      className={cn("relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200", checked ? "bg-up" : "bg-[rgb(var(--fill)/0.24)]")}
     >
-      <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform", checked ? "translate-x-[18px]" : "translate-x-0.5")} />
+      <span className={cn("absolute left-0 top-0.5 h-[27px] w-[27px] rounded-full bg-white shadow-[0_3px_8px_rgb(0_0_0/0.15),0_1px_1px_rgb(0_0_0/0.16)] transition-transform duration-200", checked ? "translate-x-[22px]" : "translate-x-0.5")} />
     </button>
   );
 }
