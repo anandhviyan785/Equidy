@@ -71,11 +71,15 @@ async function readSSE(body: ReadableStream<Uint8Array>, onDelta: (t: string) =>
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
+  let sawDone = false;
   try {
     while (true) {
-      if (signal?.aborted) break;
+      if (signal?.aborted) return;
       const { value, done } = await reader.read();
-      if (done) break;
+      if (done) {
+        if (!sawDone) throw new Error("The response was cut off. Please try again.");
+        return;
+      }
       buf += decoder.decode(value, { stream: true });
       let idx: number;
       while ((idx = buf.indexOf("\n\n")) >= 0) {
@@ -83,8 +87,14 @@ async function readSSE(body: ReadableStream<Uint8Array>, onDelta: (t: string) =>
         buf = buf.slice(idx + 2);
         const data = chunk.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim()).join("");
         if (!data) continue;
-        const evt = JSON.parse(data) as { type: string; text?: string; message?: string };
-        if (evt.type === "delta" && evt.text) onDelta(evt.text);
+        let evt: { type: string; text?: string; message?: string };
+        try {
+          evt = JSON.parse(data);
+        } catch {
+          throw new Error("Received an unreadable response. Please try again.");
+        }
+        if (evt.type === "done") sawDone = true;
+        else if (evt.type === "delta" && evt.text) onDelta(evt.text);
         else if (evt.type === "error") throw new Error(evt.message || "The AI service returned an error.");
       }
     }
