@@ -59,6 +59,7 @@ export async function streamChat({ history, onDelta, signal }: StreamArgs): Prom
       signal,
     }).catch((e) => {
       if (signal?.aborted) throw e;
+      console.warn("[equidy] /api/chat unreachable, using offline answer:", e instanceof Error ? e.message : e);
       return null;
     });
     if (res?.ok && res.body) {
