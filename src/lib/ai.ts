@@ -22,14 +22,17 @@ let statusPromise: Promise<AIStatus> | null = null;
 
 export function aiStatus(refresh = false): Promise<AIStatus> {
   if (!statusPromise || refresh) {
-    statusPromise = fetch("/api/health", { signal: AbortSignal.timeout(2500) })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
+    const pending: Promise<AIStatus> = fetch("/api/health", { signal: AbortSignal.timeout(2500) })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`health check failed (${r.status})`))))
       .then((j) => ({ online: true, ai: !!j.ai, services: j.services as Services | undefined }))
-      .catch(() => {
+      .catch((e) => {
+        console.warn("[equidy] health check failed:", e instanceof Error ? e.message : e);
         // Don't pin a transient failure (e.g. a cold start) for the page's lifetime: allow a re-check shortly.
-        setTimeout(() => { statusPromise = null; }, STATUS_RETRY_MS);
+        // Only clear our own promise so a newer refresh result is never discarded.
+        setTimeout(() => { if (statusPromise === pending) statusPromise = null; }, STATUS_RETRY_MS);
         return { online: false, ai: false };
       });
+    statusPromise = pending;
   }
   return statusPromise;
 }
