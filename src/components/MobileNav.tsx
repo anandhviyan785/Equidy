@@ -26,7 +26,25 @@ export function MobileNav() {
   const navigate = useNavigate();
   const activeMore = MORE.some(({ to }) => location.pathname.startsWith(to));
 
-  useEffect(() => setOpen(false), [location.pathname]);
+  useEffect(() => { setOpen(false); }, [location.pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const handleSignOut = async () => {
+    setOpen(false);
+    try {
+      await signOut();
+    } catch (e) {
+      console.error("[equidy] sign out failed:", e);
+    } finally {
+      navigate("/login", { replace: true });
+    }
+  };
 
   return (
     <LiquidGlass
@@ -64,16 +82,19 @@ export function MobileNav() {
           <span>More</span>
         </button>
         {open && createPortal(
+          <>
+          <button type="button" aria-label="Close menu" tabIndex={-1} onClick={() => setOpen(false)} className="fixed inset-0 z-[55] cursor-default bg-transparent" />
           <div className="fixed right-3 z-[60] mb-3 w-48 overflow-hidden rounded-2xl border border-line bg-surface/95 p-1.5 shadow-2xl backdrop-blur-xl" style={{ bottom: "calc(max(0.75rem, env(safe-area-inset-bottom)) + 5.5rem)" }}>
             {MORE.map(({ to, label, icon: Icon }) => (
               <NavLink key={to} to={to} className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm", isActive ? "bg-elevated text-fg" : "text-muted hover:bg-elevated hover:text-fg")}>
                 <Icon className="h-4 w-4" />{label}
               </NavLink>
             ))}
-            <button type="button" onClick={async () => { await signOut(); navigate("/login", { replace: true }); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-muted hover:bg-elevated hover:text-fg">
+            <button type="button" onClick={handleSignOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-muted hover:bg-elevated hover:text-fg">
               <LogOut className="h-4 w-4" />Sign out
             </button>
-          </div>,
+          </div>
+          </>,
           document.body,
         )}
       </nav>
