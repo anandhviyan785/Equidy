@@ -83,7 +83,7 @@ export function MobileNav() {
         </button>
         {open && createPortal(
           <>
-          <button type="button" aria-label="Close menu" tabIndex={-1} onClick={() => setOpen(false)} className="fixed inset-0 z-[55] cursor-default bg-transparent" />
+          <div aria-hidden="true" onClick={() => setOpen(false)} className="fixed inset-0 z-[55] cursor-default bg-transparent" />
           <div className="fixed right-3 z-[60] mb-3 w-48 overflow-hidden rounded-2xl border border-line bg-surface/95 p-1.5 shadow-2xl backdrop-blur-xl" style={{ bottom: "calc(max(0.75rem, env(safe-area-inset-bottom)) + 5.5rem)" }}>
             {MORE.map(({ to, label, icon: Icon }) => (
               <NavLink key={to} to={to} className={({ isActive }) => cn("flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm", isActive ? "bg-elevated text-fg" : "text-muted hover:bg-elevated hover:text-fg")}>
