@@ -132,7 +132,8 @@ export async function* sseEvents(stream: ReadableStream<Uint8Array>): AsyncGener
     try {
       return JSON.parse(data) as Record<string, unknown>;
     } catch {
-      return null; // ignore malformed keep-alive chunks
+      // Keep-alives carry no data lines (handled above), so unparseable data means a corrupted frame.
+      throw new GeminiError("The AI provider sent a malformed response frame.");
     }
   };
   try {

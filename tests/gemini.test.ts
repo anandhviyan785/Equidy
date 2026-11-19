@@ -86,3 +86,14 @@ describe("Gemini client", () => {
     await expect(streamGenerate(req, () => {})).rejects.toThrow("boom");
   });
 });
+
+describe("sseEvents malformed frames", () => {
+  it("throws instead of silently dropping an unparseable data frame", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) { c.enqueue(new TextEncoder().encode('data: {"a":1}\n\ndata: {"b":\n\n')); c.close(); },
+    });
+    const out: unknown[] = [];
+    await expect((async () => { for await (const e of sseEvents(stream)) out.push(e); })()).rejects.toThrow(/malformed/);
+    expect(out).toEqual([{ a: 1 }]);
+  });
+});
