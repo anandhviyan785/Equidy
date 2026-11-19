@@ -85,7 +85,8 @@ async function start(user: AuthUser, isCancelled: () => boolean): Promise<() => 
   let remote: UserData | null = null;
   try {
     remote = (await api<{ data: UserData | null }>("/api/data")).data;
-  } catch {
+  } catch (err) {
+    console.warn("[equidy] cloud sync: initial fetch failed:", err);
     setState("error");
     return noop;
   }
@@ -102,7 +103,8 @@ async function start(user: AuthUser, isCancelled: () => boolean): Promise<() => 
     try {
       await api("/api/data", { method: "PUT", body: collect(readModified(user.id) || Date.now()) });
       setState("synced");
-    } catch {
+    } catch (err) {
+      console.warn("[equidy] cloud sync: push failed:", err);
       setState("error");
     }
   };
