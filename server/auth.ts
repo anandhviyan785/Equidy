@@ -133,10 +133,17 @@ async function sessionRevoked(session: { user: SessionUser; issuedAt: number }):
 
 /** The signed-in user, or null when there is no session or its account was deleted. */
 async function liveSessionUser(req: Request): Promise<SessionUser | null> {
+  return (await liveSession(req))?.user ?? null;
+}
+
+async function liveSession(req: Request): Promise<{ user: SessionUser; issuedAt: number } | null> {
   const session = readSessionDetails(req);
   if (!session || (await sessionRevoked(session))) return null;
-  return session.user;
+  return session;
 }
+
+// Returning users stay signed in: once a session is a day old, the next visit re-issues it for another full term.
+const RENEW_AFTER_MS = 86_400_000;
 
 /** Blocks a route unless the visitor is signed in — only when sign-in is configured at all. */
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -174,8 +181,10 @@ export const authRouter = express.Router();
 authRouter.use(express.urlencoded({ extended: false })); // Apple posts its callback as a form
 
 authRouter.get("/session", asyncHandler(async (req, res) => {
+  const session = await liveSession(req);
+  if (session && Date.now() - session.issuedAt > RENEW_AFTER_MS) startSession(res, session.user);
   res.json({
-    user: await liveSessionUser(req),
+    user: session?.user ?? null,
     providers: await getProviders(),
     accounts: accountsEnabled(),
     passwordReset: passwordResetAvailable(),
