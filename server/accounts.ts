@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { promisify } from "node:util";
 import { db, dbEnabled } from "./db.js";
 import { redis, withRedisTimeout } from "./redis.js";
-import { devAccountsEnabled, devDelete, devFindByEmail, devInsert } from "./devAccounts.js";
+import { devAccountsEnabled, devDelete, devFindByEmail, devInsert, devUpdatePassword } from "./devAccounts.js";
 
 // Email + password accounts stored in Postgres (e.g. Neon, added from Vercel → Storage).
 // Enabled when DATABASE_URL (or POSTGRES_URL, set by Vercel's Postgres integrations) is present.
@@ -94,6 +94,35 @@ async function findByEmail(email: string): Promise<(Account & { password_hash: s
   }
   await ensureTable();
   return (await db()`SELECT id, email, name, password_hash FROM equidy_users WHERE email = ${email}`) as (Account & { password_hash: string })[];
+}
+
+/** The account registered to this email, or null. */
+export async function findAccount(email: string): Promise<Account | null> {
+  if (!accountsEnabled()) return null;
+  const rows = await findByEmail(normalizeEmail(email));
+  return rows.length ? { id: rows[0].id, email: rows[0].email, name: rows[0].name } : null;
+}
+
+/** Checks a new password against the same rules as sign-up. */
+export function validateNewPassword(password: unknown): string {
+  const value = typeof password === "string" ? password : "";
+  if (value.length < 8) throw new AccountError("Use a password of at least 8 characters.");
+  if (value.length > 200) throw new AccountError("That password is too long.");
+  return value;
+}
+
+/** Replaces the account's password. Returns null when the account no longer exists. */
+export async function setPassword(id: string, password: string): Promise<Account | null> {
+  const hash = await hashPassword(validateNewPassword(password));
+  if (!dbEnabled()) {
+    const updated = devAccountsEnabled() ? await devUpdatePassword(id, hash) : null;
+    return updated ? { id: updated.id, email: updated.email, name: updated.name } : null;
+  }
+  await ensureTable();
+  const rows = (await db()`
+    UPDATE equidy_users SET password_hash = ${hash} WHERE id = ${id}
+    RETURNING id, email, name`) as Account[];
+  return rows[0] ?? null;
 }
 
 export async function verifyAccount(input: { email?: string; password?: string }): Promise<Account> {

@@ -1,7 +1,9 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import crypto from "node:crypto";
 import { Apple, Google, MicrosoftEntraId, OAuth2RequestError, decodeIdToken, generateCodeVerifier, generateState } from "arctic";
-import { AccountError, accountsEnabled, createAccount, deleteAccount, rateLimit, verifyAccount } from "./accounts.js";
+import { AccountError, accountsEnabled, createAccount, deleteAccount, findAccount, normalizeEmail, rateLimit, verifyAccount, type Account } from "./accounts.js";
+import { passwordResetAvailable, requestPasswordReset, resetPassword } from "./passwordReset.js";
+import { linkOAuthUser } from "./oauthLink.js";
 import { appUrl, getEnv } from "./env.js";
 import { deleteUserData } from "./userdata.js";
 import { cancelBillingFor } from "./billing.js";
@@ -156,7 +158,7 @@ export function requireUser(req: Request, res: Response, next: NextFunction) {
 
 // ---------------- routes ----------------
 
-type Claims = { sub: string; email?: string; name?: string; picture?: string; preferred_username?: string; given_name?: string; family_name?: string };
+type Claims = { sub: string; email?: string; email_verified?: boolean | string; name?: string; picture?: string; preferred_username?: string; given_name?: string; family_name?: string };
 
 function userFrom(provider: ProviderId, c: Claims, appleName?: string): SessionUser {
   const email = c.email ?? c.preferred_username ?? null;
@@ -172,7 +174,13 @@ export const authRouter = express.Router();
 authRouter.use(express.urlencoded({ extended: false })); // Apple posts its callback as a form
 
 authRouter.get("/session", asyncHandler(async (req, res) => {
-  res.json({ user: await liveSessionUser(req), providers: await getProviders(), accounts: accountsEnabled(), clerk: clerkEnabled() });
+  res.json({
+    user: await liveSessionUser(req),
+    providers: await getProviders(),
+    accounts: accountsEnabled(),
+    passwordReset: passwordResetAvailable(),
+    clerk: clerkEnabled(),
+  });
 }));
 
 authRouter.post("/logout", (_req, res) => {
@@ -190,7 +198,7 @@ function accountRoute(action: "signup" | "signin") {
       await rateLimit(`${action}:${req.ip}`);
       const body = (req.body ?? {}) as { name?: string; email?: string; password?: string };
       const acct = action === "signup" ? await createAccount(body) : await verifyAccount(body);
-      const user: SessionUser = { id: `email:${acct.id}`, provider: "email", name: acct.name, email: acct.email, avatar: null };
+      const user = emailSessionUser(acct);
       startSession(res, user);
       // No welcome email here: the address is unverified and the name is user-chosen text.
       res.json({ user });
@@ -205,6 +213,44 @@ function accountRoute(action: "signup" | "signin") {
 
 authRouter.post("/signup", express.json(), accountRoute("signup"));
 authRouter.post("/signin", express.json(), accountRoute("signin"));
+
+const emailSessionUser = (acct: Account): SessionUser => ({ id: `email:${acct.id}`, provider: "email", name: acct.name, email: acct.email, avatar: null });
+
+const RESET_REQUESTS_PER_IP = 5;
+const RESET_REQUESTS_PER_EMAIL = 3;
+
+async function sendAccountError(res: Response, err: unknown, where: string) {
+  if (err instanceof AccountError) return void res.status(err.status).json({ error: err.message });
+  console.error(`[equidy] ${where} failed:`, err);
+  await reportError(err, where);
+  res.status(500).json({ error: "Something went wrong on our side. Please try again." });
+}
+
+// Forgot password: always answers the same way, so it can't reveal whether an email has an account.
+authRouter.post("/forgot", express.json(), async (req, res) => {
+  try {
+    const email = (req.body as { email?: unknown } | undefined)?.email;
+    await rateLimit(`forgot:${req.ip}`, RESET_REQUESTS_PER_IP);
+    if (typeof email === "string" && email.trim()) await rateLimit(`forgot-email:${normalizeEmail(email)}`, RESET_REQUESTS_PER_EMAIL);
+    await requestPasswordReset(email);
+    res.json({ ok: true });
+  } catch (err) {
+    await sendAccountError(res, err, "POST /api/auth/forgot");
+  }
+});
+
+// Sets a new password from an emailed link and signs the person in.
+authRouter.post("/reset", express.json(), async (req, res) => {
+  try {
+    await rateLimit(`reset:${req.ip}`);
+    const body = (req.body ?? {}) as { token?: unknown; password?: unknown };
+    const user = emailSessionUser(await resetPassword(body.token, body.password));
+    startSession(res, user);
+    res.json({ user });
+  } catch (err) {
+    await sendAccountError(res, err, "POST /api/auth/reset");
+  }
+});
 
 // Exchanges a verified Clerk token for Equidy's normal session cookie.
 authRouter.post("/clerk", express.json(), async (req, res) => {
@@ -295,7 +341,10 @@ async function handleCallback(req: Request, res: Response) {
         appleName = [u.name?.firstName, u.name?.lastName].filter(Boolean).join(" ") || undefined;
       } catch { /* Apple only sends the name on first sign-in */ }
     }
-    startSession(res, userFrom(p, claims, appleName));
+    // Google and Apple say whether they verified the address; only then is it matched to an existing email account.
+    const verified = (p === "google" || p === "apple") && (claims.email_verified === true || claims.email_verified === "true");
+    const user = accountsEnabled() ? await linkOAuthUser(userFrom(p, claims, appleName), verified, findAccount) : userFrom(p, claims, appleName);
+    startSession(res, user);
     res.redirect(`${APP_URL}/`);
   } catch (err) {
     console.error(`[equidy] ${p} sign-in failed:`, err instanceof OAuth2RequestError ? `${err.code} ${err.description ?? ""}` : err);

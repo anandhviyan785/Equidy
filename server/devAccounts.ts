@@ -51,5 +51,16 @@ export const devInsert = (account: StoredAccount) =>
 
 export const devFindByEmail = async (email: string) => (await load()).find((a) => a.email === email);
 
-export const devDelete = (id: string) =>
+/** Replaces the stored password hash; returns the updated account, or null if it no longer exists. */
+export const devUpdatePassword = (id: string, passwordHash: string) =>
+  exclusive(async () => {
+    const all = await load();
+    const found = all.find((a) => a.id === id);
+    if (!found) return null;
+    const updated = { ...found, password_hash: passwordHash };
+    await save(all.map((a) => (a.id === id ? updated : a)));
+    return updated;
+  });
+
+export const devDelete =(id: string) =>
   exclusive(async () => save((await load()).filter((a) => a.id !== id)));

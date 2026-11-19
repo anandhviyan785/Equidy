@@ -6,6 +6,7 @@ export type Providers = Record<ProviderId, boolean>;
 export interface AuthInfo {
   online: boolean; // auth server reachable
   accounts: boolean; // email + password accounts available
+  passwordReset: boolean; // forgot-password emails available
   clerk: boolean; // Clerk sign-in available on the server
   providers: Providers;
 }
@@ -17,13 +18,13 @@ let infoPromise: Promise<AuthInfo> | null = null;
 export function loadAuth(): Promise<AuthInfo> {
   infoPromise ??= fetch("/api/auth/session", { credentials: "same-origin", signal: AbortSignal.timeout(5000) })
     .then((r) => (r.ok ? r.json() : Promise.reject()))
-    .then((j: { user: AuthUser | null; providers: Providers; accounts?: boolean; clerk?: boolean }) => {
+    .then((j: { user: AuthUser | null; providers: Providers; accounts?: boolean; passwordReset?: boolean; clerk?: boolean }) => {
       // When the server is reachable, only a real server session counts.
       if (j.user) signIn(j.user);
       else useAuth.getState().setUser(null);
-      return { online: true, accounts: !!j.accounts, clerk: !!j.clerk, providers: j.providers };
+      return { online: true, accounts: !!j.accounts, passwordReset: !!j.passwordReset, clerk: !!j.clerk, providers: j.providers };
     })
-    .catch(() => ({ online: false, accounts: false, clerk: false, providers: NONE }))
+    .catch(() => ({ online: false, accounts: false, passwordReset: false, clerk: false, providers: NONE }))
     .finally(() => useAuth.getState().setChecked(true));
   return infoPromise;
 }
@@ -42,7 +43,7 @@ function signIn(user: AuthUser) {
   s.set({ profile: { ...s.profile, name: user.name, email: user.email ?? s.profile.email } });
 }
 
-async function post(path: string, body: object): Promise<AuthUser> {
+async function postJson(path: string, body: object, fallbackError: string): Promise<{ user?: AuthUser }> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -55,8 +56,24 @@ async function post(path: string, body: object): Promise<AuthUser> {
     throw new Error("Couldn't reach Equidy. Check your connection and try again.");
   }
   const j = (await res.json().catch(() => ({}))) as { user?: AuthUser; error?: string };
-  if (!res.ok || !j.user) throw new Error(j.error || "Sign-in failed. Please try again.");
+  if (!res.ok) throw new Error(j.error || fallbackError);
+  return j;
+}
+
+async function post(path: string, body: object): Promise<AuthUser> {
+  const j = await postJson(path, body, "Sign-in failed. Please try again.");
+  if (!j.user) throw new Error("Sign-in failed. Please try again.");
   return j.user;
+}
+
+/** Asks the server to email a reset link. Succeeds the same way whether or not the email has an account. */
+export async function requestPasswordReset(email: string) {
+  await postJson("/api/auth/forgot", { email }, "We couldn't send a reset link. Please try again.");
+}
+
+/** Sets a new password from an emailed reset link, then signs in. */
+export async function resetPassword(token: string, password: string) {
+  signIn(await post("/api/auth/reset", { token, password }));
 }
 
 export async function signUpWithEmail(name: string, email: string, password: string) {

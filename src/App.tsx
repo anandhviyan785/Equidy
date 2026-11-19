@@ -10,6 +10,7 @@ import { ResearchPage } from "@/pages/ResearchPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { LoginPage } from "@/pages/LoginPage";
+import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { TermsPage } from "@/pages/TermsPage";
 import { LandingRoute } from "@/pages/LandingRoute";
@@ -19,6 +20,7 @@ import { TitleManager } from "@/components/TitleManager";
 const pages = [
   { path: "/welcome", handle: { title: "Welcome" }, element: <LandingRoute /> },
   { path: "/login", handle: { title: "Sign in" }, element: <LoginPage /> },
+  { path: "/reset-password", handle: { title: "Reset password" }, element: <ResetPasswordPage /> },
   { path: "/privacy", handle: { title: "Privacy" }, element: <PrivacyPage /> },
   { path: "/terms", handle: { title: "Terms" }, element: <TermsPage /> },
   {

@@ -1,6 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Info, Loader2 } from "lucide-react";
+import { Info, Loader2 } from "lucide-react";
+import { validateAuthForm, MIN_PASSWORD_LENGTH, type AuthFieldErrors } from "@/lib/authValidation";
+import { FormAlert, PasswordField, TextField } from "@/components/auth/AuthFields";
+import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
 import { INDICES } from "@/data/securities";
 import { history } from "@/lib/market";
 import { demoSignIn, loadAuth, providerLabel, signInWithEmail, signUpWithEmail, startOAuth, type AuthInfo } from "@/lib/auth";
@@ -27,7 +30,8 @@ export function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
+  const [forgot, setForgot] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const urlError = useMemo(() => new URLSearchParams(location.search).get("error"), [location.search]);
   const [error, setError] = useState<string | null>(urlError);
@@ -43,6 +47,9 @@ export function LoginPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    const errors = validateAuthForm({ mode: mode === "Create account" ? "signup" : "signin", name, email, password });
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) return;
     setBusy("email");
     try {
       if (mode === "Create account") await signUpWithEmail(name, email, password);
@@ -59,14 +66,16 @@ export function LoginPage() {
       <section className="flex flex-1 flex-col px-6 py-8 sm:px-10">
         <Logo className="self-start" />
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12 animate-fade-up">
-          <h1 className="text-balance text-3xl font-semibold tracking-tight">{mode === "Sign in" ? "Welcome back" : "Create your account"}</h1>
+          <h1 className="text-balance text-3xl font-semibold tracking-tight">{forgot ? "Reset your password" : mode === "Sign in" ? "Welcome back" : "Create your account"}</h1>
           <p className="mt-2 text-[15px] text-muted">
-            {mode === "Sign in" ? "Sign in to your portfolio, markets and analysis with Equidy." : "Start tracking your portfolio and asking Equidy anything about your finances."}
+            {forgot
+              ? "Enter the email you signed up with and we'll send you a link to choose a new password."
+              : mode === "Sign in" ? "Sign in to your portfolio, markets and analysis with Equidy." : "Start tracking your portfolio and asking Equidy anything about your finances."}
           </p>
 
-          {error && (
-            <div role="alert" className="mt-6 rounded-xl border border-down/40 bg-down/10 px-3.5 py-2.5 text-sm text-down">{error}</div>
-          )}
+          {!forgot && <FormAlert message={error} />}
+
+          {forgot && <ForgotPasswordForm initialEmail={email} onBack={() => { setForgot(false); setError(null); }} />}
 
           {!info && <div className="mt-10 flex justify-center text-muted"><Loader2 className="h-5 w-5 animate-spin" /></div>}
 
@@ -76,46 +85,33 @@ export function LoginPage() {
             </Suspense>
           )}
 
-          {!clerkOn && info?.accounts && (
+          {!forgot && !clerkOn && info?.accounts && (
             <form onSubmit={submit} className="mt-7 space-y-3" noValidate>
-              <Segmented value={mode} options={["Sign in", "Create account"] as const} onChange={(m) => { setMode(m); setError(null); }} />
+              <Segmented value={mode} options={["Sign in", "Create account"] as const} onChange={(m) => { setMode(m); setError(null); setFieldErrors({}); }} />
               {mode === "Create account" && (
-                <div>
-                  <label htmlFor="name" className="label mb-1.5 block">Name</label>
-                  <input id="name" className="input h-11" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
-                </div>
+                <TextField id="name" label="Name" autoComplete="name" value={name} onChange={setName} error={fieldErrors.name} />
               )}
-              <div>
-                <label htmlFor="email" className="label mb-1.5 block">Email</label>
-                <input id="email" type="email" className="input h-11" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              <div>
-                <label htmlFor="password" className="label mb-1.5 block">Password</label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPw ? "text" : "password"}
-                    className="input h-11 pr-11"
-                    autoComplete={mode === "Sign in" ? "current-password" : "new-password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    minLength={mode === "Create account" ? 8 : undefined}
-                    required
-                  />
-                  <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted hover:text-fg" aria-label={showPw ? "Hide password" : "Show password"}>
-                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <TextField id="email" label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} error={fieldErrors.email} />
+              <PasswordField
+                value={password}
+                onChange={setPassword}
+                error={fieldErrors.password}
+                autoComplete={mode === "Sign in" ? "current-password" : "new-password"}
+                hint={mode === "Create account" ? `At least ${MIN_PASSWORD_LENGTH} characters.` : undefined}
+                labelAction={mode === "Sign in" && info.passwordReset ? (
+                  <button type="button" onClick={() => { setForgot(true); setError(null); }} className="text-xs text-blue-500 hover:underline dark:text-blue-400">
+                    Forgot password?
                   </button>
-                </div>
-                {mode === "Create account" && <p className="mt-1.5 text-xs text-muted">At least 8 characters.</p>}
-              </div>
-              <button className="btn-primary h-11 w-full text-[15px]" disabled={!!busy || !email || !password || (mode === "Create account" && !name)}>
+                ) : undefined}
+              />
+              <button className="btn-primary h-11 w-full text-[15px]" disabled={!!busy}>
                 {busy === "email" && <Loader2 className="h-4 w-4 animate-spin" />}
                 {mode}
               </button>
             </form>
           )}
 
-          {providers.length > 0 && (
+          {!forgot && providers.length > 0 && (
             <>
               {info?.accounts && (
                 <div className="my-6 flex items-center gap-3 text-xs text-muted"><span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" /></div>

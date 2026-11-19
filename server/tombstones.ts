@@ -23,12 +23,35 @@ export async function markUserDeleted(userId: string): Promise<void> {
     ON CONFLICT (user_id) DO UPDATE SET deleted_at = EXCLUDED.deleted_at`;
 }
 
-/** True when the user was deleted at or after the moment this session was issued. */
+// A password reset signs the account out everywhere: sessions issued before the reset are refused.
+let resetTable: Promise<void> | null = null;
+function ensureResetTable(): Promise<void> {
+  resetTable ??= db()`
+    CREATE TABLE IF NOT EXISTS equidy_session_resets (
+      user_id TEXT PRIMARY KEY,
+      reset_at BIGINT NOT NULL
+    )`.then(() => undefined).catch((e) => { resetTable = null; throw e; });
+  return resetTable;
+}
+
+/** Ends every session issued up to `at` (epoch ms) for this user. No-op without a database. */
+export async function revokeSessionsBefore(userId: string, at: number): Promise<void> {
+  if (!dbEnabled()) return;
+  await ensureResetTable();
+  await db()`
+    INSERT INTO equidy_session_resets (user_id, reset_at) VALUES (${userId}, ${at})
+    ON CONFLICT (user_id) DO UPDATE SET reset_at = EXCLUDED.reset_at`;
+}
+
+/** True when the user was deleted, or reset their password, at or after the moment this session was issued. */
 export async function isSessionRevoked(userId: string, issuedAt: number): Promise<boolean> {
   if (!dbEnabled()) return false;
-  await ensureTable();
-  const rows = (await db()`SELECT deleted_at FROM equidy_deleted_users WHERE user_id = ${userId}`) as { deleted_at: number | string }[];
-  return rows.length > 0 && issuedAt <= Number(rows[0].deleted_at);
+  await Promise.all([ensureTable(), ensureResetTable()]);
+  const rows = (await db()`
+    SELECT deleted_at AS at FROM equidy_deleted_users WHERE user_id = ${userId}
+    UNION ALL
+    SELECT reset_at AS at FROM equidy_session_resets WHERE user_id = ${userId}`) as { at: number | string }[];
+  return rows.some((r) => issuedAt <= Number(r.at));
 }
 
 /** True when the user deleted their account at or after `sinceMs` (epoch milliseconds). */
