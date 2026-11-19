@@ -59,7 +59,7 @@ export function ChatPage() {
   if (!conv) {
     const suggestions = (
       <>
-        <div className="mt-6 hidden gap-2.5 sm:grid-cols-2 lg:grid lg:grid-cols-3">
+        <div className="mt-6 hidden gap-2.5 lg:grid lg:grid-cols-3">
           {SUGGESTIONS.map((s, i) => (
             <button
               key={s.title}
