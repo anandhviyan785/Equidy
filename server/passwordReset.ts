@@ -4,6 +4,7 @@ import { db, dbEnabled } from "./db.js";
 import { devAccountsEnabled } from "./devAccounts.js";
 import { emailEnabled, sendPasswordResetEmail } from "./email.js";
 import { appUrl } from "./env.js";
+import { reportError } from "./monitoring.js";
 import { revokeSessionsBefore } from "./tombstones.js";
 
 // Forgot-password: a random single-use token is emailed as a link; only its SHA-256 hash is stored.
@@ -20,6 +21,8 @@ interface TokenStore {
   save(tokenHash: string, userId: string, expiresAt: number): Promise<void>;
   /** Marks the token used and returns its user, or null if it is unknown, used or expired. */
   consume(tokenHash: string, now: number): Promise<string | null>;
+  /** Makes a just-consumed token usable again, when the password change it was spent on failed. */
+  release(tokenHash: string, userId: string, expiresAt: number): Promise<void>;
 }
 
 // Local development without a database keeps tokens in memory (never used in production).
@@ -33,6 +36,9 @@ const memoryStore: TokenStore = {
     const found = memoryTokens.get(tokenHash);
     memoryTokens.delete(tokenHash);
     return found && found.expiresAt > now ? found.userId : null;
+  },
+  async release(tokenHash, userId, expiresAt) {
+    memoryTokens.set(tokenHash, { userId, expiresAt });
   },
 };
 
@@ -64,6 +70,10 @@ const dbStore: TokenStore = {
       WHERE token_hash = ${tokenHash} AND used_at IS NULL AND expires_at > ${now}
       RETURNING user_id`) as { user_id: string }[];
     return rows[0]?.user_id ?? null;
+  },
+  async release(tokenHash) {
+    await ensureTable();
+    await db()`UPDATE equidy_password_resets SET used_at = NULL WHERE token_hash = ${tokenHash}`;
   },
 };
 
@@ -103,11 +113,24 @@ export async function resetPassword(tokenInput: unknown, passwordInput: unknown)
   const password = validateNewPassword(passwordInput);
   if (typeof tokenInput !== "string" || !tokenInput || tokenInput.length > 200) throw new AccountError(INVALID_LINK);
 
-  const userId = await store().consume(hashToken(tokenInput), Date.now());
+  const tokenHash = hashToken(tokenInput);
+  const userId = await store().consume(tokenHash, Date.now());
   if (!userId) throw new AccountError(INVALID_LINK);
-  const account = await setPassword(userId, password);
+  let account: Account | null;
+  try {
+    account = await setPassword(userId, password);
+  } catch (err) {
+    // The password didn't change, so don't burn the link: let the user retry with it.
+    await store().release(tokenHash, userId, Date.now() + TOKEN_TTL_MS).catch((e) => reportError(e, "password reset: release token"));
+    throw err;
+  }
   if (!account) throw new AccountError(INVALID_LINK);
-  // One millisecond back, so the fresh session issued right after this isn't caught by the revocation.
-  await revokeSessionsBefore(`email:${account.id}`, Date.now() - 1);
+  try {
+    // One millisecond back, so the fresh session issued right after this isn't caught by the revocation.
+    await revokeSessionsBefore(`email:${account.id}`, Date.now() - 1);
+  } catch (err) {
+    // The password already changed; report loudly rather than telling the user their reset failed.
+    await reportError(err, "password reset: session revocation failed after password change");
+  }
   return account;
 }
