@@ -23,6 +23,16 @@ export function getConsent(): Consent {
 /** Conversation IDs are removed so analytics can't link a page view to a chat. */
 export const cleanPath = (path: string) => path.split(/[?#]/)[0].replace(/^\/c\/[^/]+/, "/c");
 
+/** Vercel Analytics event URL without query or hash, so reset tokens and error text never leave the browser. */
+export function sanitizeEventUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.origin}${cleanPath(parsed.pathname)}`;
+  } catch {
+    return cleanPath(url);
+  }
+}
+
 let client: Promise<PostHog | null> | null = null;
 
 function loadClient(): Promise<PostHog | null> {
