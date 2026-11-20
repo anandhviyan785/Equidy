@@ -8,6 +8,7 @@ import { isSymbol } from "./market.js";
 import { reportError } from "./monitoring.js";
 import { relevantHeadlines, sanitizeHeadline } from "./vector.js";
 import { asyncHandler } from "./async.js";
+import { FRESHNESS_RULES, currentTimeNote } from "./freshness.js";
 
 export const MODEL = process.env.EQUIDY_MODEL ?? "gemini-3.6-flash";
 export const hasKey = hasGeminiKey();
@@ -22,6 +23,8 @@ Personality:
 - Greetings and small talk get a short, friendly, human reply, never a lecture or a list of features. If they say "hi", say hi back by name and ask what's on their mind.
 - Off-topic messages (weather, sport, food, jokes, how you are) get a natural, kind reply. Answer briefly if you can, then gently offer to help with money or markets. Never refuse to chat or answer coldly.
 - If the user seems worried or upset, acknowledge the feeling first, then help calmly.
+
+${FRESHNESS_RULES}
 
 Guidelines:
 - Ground answers in the PLATFORM CONTEXT provided (the user's portfolio, watchlist, market levels, reference fundamentals and Finnhub intelligence). Quote specific numbers from it when relevant.
@@ -115,8 +118,9 @@ app.post("/api/chat", requireAuth, throttle("chat", 20), asyncHandler(async (req
       {
         model: MODEL,
         maxOutputTokens: 16000,
-        instructions: `${SYSTEM}\n\nPLATFORM CONTEXT\n${String(context ?? "").slice(0, 30_000)}${intel}`,
+        instructions: `${SYSTEM}\n\n${currentTimeNote(new Date())}\n\nPLATFORM CONTEXT\n${String(context ?? "").slice(0, 30_000)}${intel}`,
         input: clean,
+        webSearch: true,
         signal: abort.signal,
       },
       (text) => send({ type: "delta", text }),

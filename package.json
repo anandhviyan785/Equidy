@@ -26,7 +26,6 @@
     "arctic": "^3.6.0",
     "clsx": "^2.1.1",
     "express": "^4.21.1",
-    "liquid-glass-react": "^1.1.1",
     "lucide-react": "^0.460.0",
     "pg": "8.23.1",
     "posthog-js": "1.447.3",

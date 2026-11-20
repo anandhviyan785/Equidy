@@ -11,8 +11,12 @@ export interface GenerateRequest {
   maxOutputTokens: number;
   /** Omit to let the model decide how much to think (dynamic thinking). */
   thinking?: ThinkingLevel;
+  /** Ground the answer in live Google Search results (for news, prices and anything recent). */
+  webSearch?: boolean;
   signal?: AbortSignal;
 }
+
+export type WebSource = { uri: string; title: string };
 
 /** How a response ended: completed normally, hit the token limit, or was blocked/refused. */
 export type FinishReason = "completed" | "max_tokens" | "refusal";
@@ -49,6 +53,7 @@ function body(req: GenerateRequest) {
   return JSON.stringify({
     systemInstruction: { parts: [{ text: req.instructions }] },
     contents: toContents(req.input),
+    ...(req.webSearch ? { tools: [{ google_search: {} }] } : {}),
     generationConfig: {
       maxOutputTokens: req.maxOutputTokens,
       ...(req.thinking ? { thinkingConfig: { thinkingLevel: req.thinking } } : {}),
@@ -87,8 +92,9 @@ async function post(req: GenerateRequest, stream: boolean): Promise<Response> {
 }
 
 type Part = { text?: string; thought?: boolean };
+type GroundingMetadata = { groundingChunks?: { web?: { uri?: string; title?: string } }[] };
 export type GenerateResponse = {
-  candidates?: { content?: { parts?: Part[] }; finishReason?: string }[];
+  candidates?: { content?: { parts?: Part[] }; finishReason?: string; groundingMetadata?: GroundingMetadata }[];
   promptFeedback?: { blockReason?: string };
   error?: { message?: string; status?: string; code?: number };
 };
@@ -110,6 +116,30 @@ export const textOf = (r: GenerateResponse) =>
     .filter((p) => !p.thought && typeof p.text === "string")
     .map((p) => p.text)
     .join("");
+
+const MAX_SOURCES = 6;
+
+/** Web pages Google Search grounded this response on, de-duplicated. */
+export function sourcesOf(r: GenerateResponse): WebSource[] {
+  const seen = new Set<string>();
+  const out: WebSource[] = [];
+  for (const c of r.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []) {
+    const uri = c.web?.uri;
+    if (!uri || !/^https?:\/\//.test(uri) || seen.has(uri)) continue;
+    seen.add(uri);
+    out.push({ uri, title: c.web?.title || new URL(uri).hostname });
+  }
+  return out;
+}
+
+/** Markdown list of sources; characters that would break link syntax are removed from titles and URLs. */
+function sourcesMarkdown(sources: WebSource[]): string {
+  if (!sources.length) return "";
+  const items = sources
+    .slice(0, MAX_SOURCES)
+    .map((s) => `- [${s.title.replace(/[[\]()\n]/g, " ").trim()}](${s.uri.replace(/[()\s]/g, encodeURIComponent)})`);
+  return `\n\n**Sources**\n${items.join("\n")}`;
+}
 
 /** Single request; returns the output text. */
 export async function generate(req: GenerateRequest): Promise<{ text: string; finish: FinishReason }> {
@@ -161,12 +191,19 @@ export async function streamGenerate(req: GenerateRequest, onDelta: (text: strin
   const res = await post(req, true);
   if (!res.body) throw new GeminiError("The AI provider returned an empty stream.");
   let finish: FinishReason = "completed";
+  let sources: WebSource[] = [];
   for await (const evt of sseEvents(res.body)) {
     const r = evt as GenerateResponse;
     if (r.error) throw new GeminiError(r.error.message ?? "The AI provider returned an error.", r.error.code, r.error.status);
     const text = textOf(r);
     if (text) onDelta(text);
+    const found = sourcesOf(r);
+    if (found.length) sources = found; // grounding metadata arrives on the final chunk(s)
     finish = finishReason(r) ?? finish;
+  }
+  if (req.webSearch && finish !== "refusal") {
+    const list = sourcesMarkdown(sources);
+    if (list) onDelta(list);
   }
   return finish;
 }
