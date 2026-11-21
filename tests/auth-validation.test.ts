@@ -46,4 +46,15 @@ describe("linkOAuthUser", () => {
   it("keeps the Google identity when the account lookup fails", async () => {
     expect(await linkOAuthUser(google, true, async () => { throw new Error("db down"); })).toBe(google);
   });
+
+  it("secures the existing account before linking it", async () => {
+    const calls: string[] = [];
+    const user = await linkOAuthUser(google, true, async () => account, async (a) => { calls.push(a.id); });
+    expect(calls).toEqual(["abc"]);
+    expect(user.id).toBe("email:abc");
+  });
+
+  it("does not link when securing the account fails", async () => {
+    expect(await linkOAuthUser(google, true, async () => account, async () => { throw new Error("db down"); })).toBe(google);
+  });
 });

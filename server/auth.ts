@@ -1,7 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import crypto from "node:crypto";
 import { Apple, Google, MicrosoftEntraId, OAuth2RequestError, decodeIdToken, generateCodeVerifier, generateState } from "arctic";
-import { AccountError, accountsEnabled, createAccount, deleteAccount, findAccount, normalizeEmail, rateLimit, verifyAccount, type Account } from "./accounts.js";
+import { AccountError, accountsEnabled, createAccount, deleteAccount, findAccount, normalizeEmail, rateLimit, setPassword, verifyAccount, type Account } from "./accounts.js";
 import { passwordResetAvailable, requestPasswordReset, resetPassword } from "./passwordReset.js";
 import { linkOAuthUser } from "./oauthLink.js";
 import { appUrl, getEnv } from "./env.js";
@@ -11,7 +11,7 @@ import { clerkEnabled, deleteClerkUser, verifyClerkUser } from "./clerk.js";
 import { sendWelcomeEmail } from "./email.js";
 import { reportError } from "./monitoring.js";
 import { asyncHandler } from "./async.js";
-import { isSessionRevoked, markUserDeleted } from "./tombstones.js";
+import { isSessionRevoked, markUserDeleted, revokeSessionsBefore } from "./tombstones.js";
 
 // Sign-in: email + password accounts (stored in Postgres, see accounts.ts) and OAuth with
 // Google, Microsoft (Entra ID) and Apple. Each OAuth provider is enabled when its credentials are set.
@@ -352,13 +352,23 @@ async function handleCallback(req: Request, res: Response) {
     }
     // Google and Apple say whether they verified the address; only then is it matched to an existing email account.
     const verified = (p === "google" || p === "apple") && (claims.email_verified === true || claims.email_verified === "true");
-    const user = accountsEnabled() ? await linkOAuthUser(userFrom(p, claims, appleName), verified, findAccount) : userFrom(p, claims, appleName);
+    const user = accountsEnabled() ? await linkOAuthUser(userFrom(p, claims, appleName), verified, findAccount, secureLinkedAccount) : userFrom(p, claims, appleName);
     startSession(res, user);
     res.redirect(`${APP_URL}/`);
   } catch (err) {
     console.error(`[equidy] ${p} sign-in failed:`, err instanceof OAuth2RequestError ? `${err.code} ${err.description ?? ""}` : err);
     fail(res, "We couldn't complete sign-in. Please try again.");
   }
+}
+
+/**
+ * Called when a verified provider email is about to be linked to an existing email account. Sign-up never verified
+ * that address, so a pre-planted password or session could belong to someone else: replace the password with a
+ * random one (the real owner can set a new one via "Forgot password") and end all existing sessions.
+ */
+async function secureLinkedAccount(account: { id: string }): Promise<void> {
+  await setPassword(account.id, crypto.randomBytes(32).toString("hex"));
+  await revokeSessionsBefore(`email:${account.id}`, Date.now() - 1);
 }
 
 authRouter.get("/:provider/callback", asyncHandler(handleCallback));
