@@ -200,7 +200,7 @@ function Message({ m, streaming, canRegenerate, onRegenerate }: { m: ChatMessage
           </div>
         )}
         {!streaming && m.content && (
-          <div className="mt-2 flex items-center gap-1 text-muted opacity-0 transition-opacity group-hover:opacity-100 max-lg:opacity-100">
+          <div className="mt-2 flex items-center gap-1 text-muted opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 max-lg:opacity-100">
             <button className="btn-ghost p-1.5" onClick={copy} aria-label="Copy">{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}</button>
             {canRegenerate && <button className="btn-ghost p-1.5" onClick={onRegenerate} aria-label="Regenerate"><RotateCcw className="h-3.5 w-3.5" /></button>}
             {m.source && <span className="ml-1 text-[11px]">{SOURCE_LABEL[m.source] ?? "Offline engine"}</span>}
