@@ -7,6 +7,8 @@ export const Markdown = memo(function Markdown({ text }: { text: string }) {
     <div className="prose-equidy">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        // Model output can be steered by web search results; an auto-loaded image URL could leak chat data.
+        disallowedElements={["img"]}
         components={{
           table: ({ children }) => (
             <div className="not-prose my-3 overflow-x-auto rounded-xl border border-line">
