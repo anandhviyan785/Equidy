@@ -5,7 +5,7 @@ import { cn } from "@/lib/format";
 /** Inline message under a field, announced to screen readers. */
 export function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
-  return <p id={id} className="mt-1.5 text-xs text-down">{message}</p>;
+  return <p id={id} role="alert" className="mt-1.5 text-xs text-down">{message}</p>;
 }
 
 interface TextFieldProps {
