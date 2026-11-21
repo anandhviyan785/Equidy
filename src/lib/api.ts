@@ -19,7 +19,7 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
   } catch {
     throw new ApiError("Couldn't reach Equidy. Check your connection and try again.", 0);
   }
-  const j = (await res.json().catch(() => ({}))) as T & { error?: string };
+  const j = ((await res.json().catch(() => null)) ?? {}) as T & { error?: string };
   if (!res.ok) throw new ApiError(j.error || `Request failed (${res.status})`, res.status);
   return j;
 }

@@ -55,7 +55,7 @@ async function postJson(path: string, body: object, fallbackError: string): Prom
   } catch {
     throw new Error("Couldn't reach Equidy. Check your connection and try again.");
   }
-  const j = (await res.json().catch(() => ({}))) as { user?: AuthUser; error?: string };
+  const j = ((await res.json().catch(() => null)) ?? {}) as { user?: AuthUser; error?: string };
   if (!res.ok) throw new Error(j.error || fallbackError);
   return j;
 }
@@ -131,7 +131,7 @@ export async function deleteAccount() {
     throw new Error("Your session has expired, so we couldn't confirm your account was deleted. Please sign in again and retry.");
   }
   if (!res.ok && res.status !== 401) {
-    const j = (await res.json().catch(() => ({}))) as { error?: string };
+    const j = ((await res.json().catch(() => null)) ?? {}) as { error?: string };
     throw new Error(j.error || "We couldn't delete your account. Please try again.");
   }
   usePortfolio.setState({ holdings: [], owner: null });
