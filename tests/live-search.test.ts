@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { sourcesOf, streamGenerate } from "../server/gemini";
+import { sourcesOf, streamGenerate, streamGenerateWithSearch } from "../server/gemini";
 import { currentTimeNote } from "../server/freshness";
 
 const req = { model: "gemini-test", instructions: "sys", input: [{ role: "user" as const, content: "Is Anthropic public?" }], maxOutputTokens: 100 };
@@ -47,5 +47,28 @@ describe("currentTimeNote", () => {
     const note = currentTimeNote(new Date("2026-11-20T09:41:05Z"));
     expect(note).toContain("Friday, 2026-11-20 09:41 UTC");
     expect(note).toMatch(/search/i);
+  });
+});
+
+describe("search quota fallback", () => {
+  it("retries without search when Google Search is rate limited, and says so to the model", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 429, message: "quota", status: "RESOURCE_EXHAUSTED" } }), { status: 429 }))
+      .mockResolvedValueOnce(new Response(sse([grounded("Answer without search.", [], "STOP")]), { status: 200 }));
+    let text = "";
+    const finish = await streamGenerateWithSearch(req, (d) => (text += d));
+    expect(finish).toBe("completed");
+    expect(text).toBe("Answer without search.");
+    const first = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const second = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(first.tools).toEqual([{ google_search: {} }]);
+    expect(second.tools).toBeUndefined();
+    expect(second.systemInstruction.parts[0].text).toMatch(/search is unavailable/i);
+  });
+
+  it("does not retry on other errors", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 400, message: "bad", status: "INVALID_ARGUMENT" } }), { status: 400 }));
+    await expect(streamGenerateWithSearch(req, () => {})).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

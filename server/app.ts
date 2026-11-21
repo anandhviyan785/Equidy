@@ -1,6 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import { authRouter, requireAuth } from "./auth.js";
-import { describeError, generate, hasGeminiKey, streamGenerate } from "./gemini.js";
+import { describeError, generate, hasGeminiKey, streamGenerateWithSearch } from "./gemini.js";
 import { apiRouter, servicesStatus, throttle } from "./api.js";
 import { billingRouter, billingWebhook } from "./billing.js";
 import { getCompanyIntel, getMarketNews, intelToText } from "./finnhub.js";
@@ -114,13 +114,12 @@ app.post("/api/chat", requireAuth, throttle("chat", 20), asyncHandler(async (req
   res.on("close", () => abort.abort());
 
   try {
-    const finish = await streamGenerate(
+    const finish = await streamGenerateWithSearch(
       {
         model: MODEL,
         maxOutputTokens: 16000,
         instructions: `${SYSTEM}\n\n${currentTimeNote(new Date())}\n\nPLATFORM CONTEXT\n${String(context ?? "").slice(0, 30_000)}${intel}`,
         input: clean,
-        webSearch: true,
         signal: abort.signal,
       },
       (text) => send({ type: "delta", text }),

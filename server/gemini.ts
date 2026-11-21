@@ -208,6 +208,26 @@ export async function streamGenerate(req: GenerateRequest, onDelta: (text: strin
   return finish;
 }
 
+const SEARCH_UNAVAILABLE_NOTE = `\n\nLIVE SEARCH STATUS\nLive web search is unavailable for this message (usage limit reached). Answer from the PLATFORM CONTEXT and headlines provided. For anything that may have changed recently, say clearly that you could not check the latest news just now, and never state that something has not happened.`;
+
+const isQuotaError = (err: unknown) => err instanceof GeminiError && (err.status === 429 || err.code === "RESOURCE_EXHAUSTED");
+
+/**
+ * Streams with Google Search grounding; if the search allowance is used up, retries once without it
+ * so chat keeps working. The retry only happens when nothing has been streamed yet.
+ */
+export async function streamGenerateWithSearch(req: GenerateRequest, onDelta: (text: string) => void): Promise<FinishReason> {
+  let streamed = false;
+  const track = (text: string) => { streamed = true; onDelta(text); };
+  try {
+    return await streamGenerate({ ...req, webSearch: true }, track);
+  } catch (err) {
+    if (streamed || !isQuotaError(err) || req.signal?.aborted) throw err;
+    console.warn("[equidy] web search quota reached; answering without search");
+    return streamGenerate({ ...req, webSearch: false, instructions: req.instructions + SEARCH_UNAVAILABLE_NOTE }, onDelta);
+  }
+}
+
 /** User-facing error text that never leaks provider details. */
 export function describeError(err: unknown): string {
   if (err instanceof GeminiError) {
