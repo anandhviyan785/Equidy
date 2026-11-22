@@ -4,6 +4,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { signOut } from "@/lib/auth";
 import { cn } from "@/lib/format";
 import { Logo } from "./ui";
+import { InstallAppButton } from "./InstallApp";
 
 const ITEMS = [
   { to: "/", label: "Chat", icon: MessageSquare, end: true },
@@ -88,6 +89,7 @@ export function MobileNav() {
                 </NavLink>
               ))}
             </nav>
+            <InstallAppButton className="mt-1 px-3 py-3 [&>svg]:h-4 [&>svg]:w-4" />
             <button
               type="button"
               onClick={handleSignOut}

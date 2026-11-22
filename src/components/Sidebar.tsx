@@ -8,6 +8,7 @@ import { useAuth, useChats, useSettings } from "@/store";
 import { signOut } from "@/lib/auth";
 import { cn } from "@/lib/format";
 import { Logo } from "./ui";
+import { InstallAppButton } from "./InstallApp";
 
 const NAV = [
   { to: "/portfolio", label: "Portfolio", icon: Briefcase },
@@ -170,6 +171,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
         </div>
 
         <div className="border-t border-line p-2">
+          <InstallAppButton collapsed={isCollapsed} className="px-2.5 py-2" />
           <NavLink
             to="/settings"
             title={isCollapsed ? "Settings" : undefined}

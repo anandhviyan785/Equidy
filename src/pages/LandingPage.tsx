@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, BarChart3, Briefcase, ChevronDown, GraduationCap, MessageSquare, Scale, type LucideIcon } from "lucide-react";
 import logoUrl from "@/assets/logo-block.png";
 import { ConsentBanner } from "@/components/ConsentBanner";
+import { InstallAppButton } from "@/components/InstallApp";
 import { useAuth } from "@/store";
 import { cn } from "@/lib/format";
 
@@ -148,6 +149,7 @@ function Hero({ signedIn }: { signedIn: boolean }) {
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3" data-reveal style={delay(180)}>
           <Link to={signedIn ? "/" : "/login"} className="btn-primary h-12 px-6 text-base">{signedIn ? "Open Equidy" : "Get started"} <ArrowRight className="h-4 w-4" aria-hidden /></Link>
           <a href="#features" className="btn-outline h-12 px-6 text-base">Explore features</a>
+          <InstallAppButton plain className="btn-ghost h-12 gap-2 px-5 text-base" />
         </div>
         <p className="mt-5 text-xs text-muted" data-reveal style={delay(220)}>Powered by Google Gemini. Market data from Finnhub and Alpha Vantage.</p>
         <ProductPreview />
