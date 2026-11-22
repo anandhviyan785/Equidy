@@ -151,7 +151,7 @@ function Hero({ signedIn }: { signedIn: boolean }) {
           <a href="#features" className="btn-outline h-12 px-6 text-base">Explore features</a>
           <InstallAppButton plain className="btn-ghost h-12 gap-2 px-5 text-base" />
         </div>
-        <p className="mt-5 text-xs text-muted" data-reveal style={delay(220)}>Powered by Google Gemini. Market data from Finnhub and Alpha Vantage.</p>
+        <p className="mt-5 text-xs text-muted" data-reveal style={delay(220)}>Powered by Claude. Market data from Finnhub and Alpha Vantage.</p>
         <ProductPreview />
       </div>
     </section>

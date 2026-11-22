@@ -6,7 +6,6 @@ import { passwordResetAvailable, requestPasswordReset, resetPassword } from "./p
 import { linkOAuthUser } from "./oauthLink.js";
 import { appUrl, getEnv } from "./env.js";
 import { deleteUserData } from "./userdata.js";
-import { cancelBillingFor } from "./billing.js";
 import { clerkEnabled, deleteClerkUser, verifyClerkUser } from "./clerk.js";
 import { sendWelcomeEmail } from "./email.js";
 import { reportError } from "./monitoring.js";
@@ -287,7 +286,6 @@ authRouter.post("/delete", asyncHandler(async (req, res) => {
   const user = await liveSessionUser(req);
   if (!user) return void res.status(401).json({ error: "Please sign in to continue." });
   try {
-    await cancelBillingFor(user.id);
     await markUserDeleted(user.id);
     await deleteUserData(user.id);
     if (user.provider === "email") await deleteAccount(user.id.replace(/^email:/, ""));

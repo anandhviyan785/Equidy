@@ -9,10 +9,10 @@ npm install
 npm run dev          # web on http://localhost:5173, API on :8787
 ```
 
-To get live answers from Google Gemini, set a free key (from https://aistudio.google.com/apikey) before starting the API:
+To get live answers from Claude, set an Anthropic API key (from https://console.anthropic.com) before starting the API:
 
 ```bash
-cp .env.example .env   # then fill in GEMINI_API_KEY
+cp .env.example .env   # then fill in ANTHROPIC_API_KEY
 export $(grep -v '^#' .env | xargs) && npm run dev
 ```
 
@@ -26,7 +26,8 @@ Every integration is optional and switches on when its keys are set (see `.env.e
 
 | Service | Used for | Keys |
 |---|---|---|
-| **Google Gemini** | The AI assistant (streamed; default model `gemini-3.6-flash`, free tier) | `GEMINI_API_KEY` |
+| **Claude (Anthropic)** | The AI assistant (streamed, with live web search; default model `claude-opus-5-5`) | `ANTHROPIC_API_KEY` |
+| **Google Gemini** | Backup assistant when no Anthropic key is set, and question-to-news matching (`gemini-embedding-001`) | `GEMINI_API_KEY` |
 | **Neon Postgres** | The database: email/password accounts, cloud-synced portfolio, watchlist, chats and settings, shared market-data cache. Tables are created automatically | `DATABASE_URL` |
 | **Alpha Vantage** | Daily price history behind charts and risk statistics, plus quotes | `ALPHAVANTAGE_API_KEY` (`ALPHAVANTAGE_PREMIUM=true` for a paid key) |
 | **Finnhub** | Financial intelligence: company profile, key metrics, analyst ratings, earnings surprises, peers, company and market news. Also real-time quotes. Fed to the AI as context | `FINNHUB_API_KEY` |
@@ -39,7 +40,7 @@ All of the data services work on free plans, and the defaults are tuned to stay 
 - **Neon Free**: 0.5 GB Postgres, which is plenty for accounts, synced data and caches. Idle databases suspend and wake automatically on the next request.
 - **Alpha Vantage Free**: 25 requests a day. History is cached for 24 hours and shared through the database (enough for about 20 symbols a day); quotes use Finnhub first.
 - **Finnhub Free**: 60 calls a minute. Every endpoint Equidy uses (quote, profile, metrics, recommendations, earnings, peers, company and market news) is on the free plan. Crypto quotes need a paid Finnhub plan, so BTC and ETH use Alpha Vantage's free daily data instead.
-- Without a Gemini key Equidy uses its free offline engine. Vercel's free Hobby plan is for non-commercial use.
+- Claude is paid per use (Claude Opus 5.5: $4 per million input tokens, $20 per million output tokens). Without an Anthropic or Gemini key Equidy uses its free offline engine. Vercel's free Hobby plan is for non-commercial use.
 
 ### Database setup (Neon)
 
@@ -71,7 +72,7 @@ Apple needs HTTPS and a real domain. It does not accept `localhost` redirect URI
 
 1. Push this folder to a GitHub repository, with `package.json` at the top level.
 2. At vercel.com, sign up with GitHub, choose **Add New → Project**, and import the repository. The settings come from `vercel.json`, so change nothing.
-3. Under **Environment Variables**, add `SESSION_SECRET` (a long random string), then any of the service keys above: `GEMINI_API_KEY`, a Neon database from **Storage** (sets `DATABASE_URL`), `ALPHAVANTAGE_API_KEY` and `FINNHUB_API_KEY`.
+3. Under **Environment Variables**, add `SESSION_SECRET` (a long random string), then any of the service keys above: `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, a Neon database from **Storage** (sets `DATABASE_URL`), `ALPHAVANTAGE_API_KEY` and `FINNHUB_API_KEY`.
 4. Click **Deploy**. Your site is at `https://<project>.vercel.app`. `APP_URL` is set automatically from Vercel's production domain.
 
 The frontend is served as static files, and `api/index.ts` runs the same Express app as a serverless function. `render.yaml` and the `Dockerfile` remain for Render or any container host.
@@ -94,9 +95,11 @@ Keyboard: `Ctrl/⌘+B` toggles the sidebar, `Ctrl/⌘+Shift+O` starts a new chat
 ## Architecture
 
 ```
-server/app.ts          Express API: /api/health, /api/chat (SSE streaming from Google Gemini)
+server/app.ts          Express API: /api/health, /api/chat (SSE streaming from Claude, or Gemini as backup)
 server/api.ts          Routes: /api/market/*, /api/intel/*, /api/data (sync)
-server/gemini.ts       Fetch-based Gemini client (one-shot + SSE streaming)
+server/ai.ts           Chooses the provider: Claude if ANTHROPIC_API_KEY is set, else Gemini
+server/claude.ts       Claude client (@anthropic-ai/sdk): streaming, web search, refusal fallback
+server/gemini.ts       Fetch-based Gemini client (backup; one-shot + SSE streaming)
 server/db.ts           Neon Postgres connection and table setup
 server/accounts.ts     Email/password accounts (scrypt hashes in Postgres)
 server/auth.ts         Sign-in (email, Google, Microsoft, Apple), signed session cookies
@@ -113,7 +116,7 @@ src/
   lib/sync.ts          Cloud sync of the stores through the server
   lib/finance.ts       Positions, risk metrics, correlation, compounding
   lib/context.ts       Portfolio/market snapshot shared with the AI (labels live vs simulated)
-  lib/ai.ts            Client: Gemini via backend, automatic fallback to the offline engine
+  lib/ai.ts            Client: Claude via backend, automatic fallback to the offline engine
   lib/engine.ts        Offline analysis engine (intent routing → Markdown)
   lib/chatRunner.ts    Streaming lifecycle (abort, regenerate, survives navigation)
   lib/auth.ts          Session check, OAuth redirect, demo sign-in, sign-out
@@ -122,7 +125,7 @@ src/
 tests/                 Vitest unit tests
 ```
 
-**AI backend.** Equidy calls the Google Gemini API directly with `fetch` (`server/gemini.ts`, no SDK). The default model is `gemini-3.6-flash` (free tier), with low thinking for chat titles and dynamic thinking for answers. Override the model with `EQUIDY_MODEL`. The API key stays on the server and is never sent to the browser. Each chat request adds Finnhub intelligence for the companies mentioned and the day's market headlines.
+**AI backend.** Equidy's assistant runs on Claude through the official Anthropic SDK (`server/claude.ts`). The default model is `claude-opus-5-5` at medium effort for answers (with live web search and cited sources) and low effort for chat titles; override it with `EQUIDY_CLAUDE_MODEL`. A refused request is retried on a fallback model chosen by the API. Without `ANTHROPIC_API_KEY`, the server falls back to Google Gemini (`server/gemini.ts`, model set by `EQUIDY_MODEL`). The API key stays on the server and is never sent to the browser. Each chat request adds Finnhub intelligence for the companies mentioned and the day's market headlines.
 
 **Market data.** Live quotes replace simulated prices symbol by symbol, and real daily history replaces the simulated series wherever it has loaded. Anything without real data keeps the reproducible simulator (correlated random walks anchored to reference levels), and the app and the AI label which is which.
 

@@ -4,7 +4,6 @@ import { useChats, usePortfolio, useSettings, type Theme } from "@/store";
 import { aiStatus, type AIStatus, type Services } from "@/lib/ai";
 import { cn } from "@/lib/format";
 import { Page, PageHeader, Segmented, Toggle } from "@/components/ui";
-import { BillingSection } from "@/components/BillingSection";
 import { analyticsAvailable, getConsent, setConsent } from "@/lib/analytics";
 
 function Section({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
@@ -99,7 +98,6 @@ export function SettingsPage() {
           ))}
         </Section>
 
-        <BillingSection />
 
         {analyticsAvailable() && (
           <Section title="Privacy">

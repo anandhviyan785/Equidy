@@ -2,7 +2,7 @@ import express from "express";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import { app, hasKey, MODEL } from "./app.js";
+import { app, hasKey, MODEL, PROVIDER } from "./app.js";
 import { authEnabled, getProviders } from "./auth.js";
 import { accountsEnabled } from "./accounts.js";
 import { servicesStatus } from "./api.js";
@@ -17,7 +17,7 @@ if (fs.existsSync(dist)) {
 }
 
 app.listen(PORT, async () => {
-  console.log(`[equidy] API on http://localhost:${PORT} — ${hasKey ? `Gemini enabled (${MODEL})` : "offline engine (set GEMINI_API_KEY to enable Gemini)"}`);
+  console.log(`[equidy] API on http://localhost:${PORT} — ${hasKey ? `${PROVIDER === "claude" ? "Claude" : "Gemini"} enabled (${MODEL})` : "offline engine (set ANTHROPIC_API_KEY to enable Claude)"}`);
   const on = Object.entries(await getProviders()).filter(([, v]) => v).map(([k]) => k);
   if (accountsEnabled()) on.unshift("email accounts");
   console.log(`[equidy] sign-in: ${authEnabled() ? on.join(", ") : "not configured (set DATABASE_URL for email accounts)"}`);

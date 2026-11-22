@@ -24,7 +24,7 @@ vi.mock("@upstash/redis", () => ({
 
 const SERVICE_KEYS = [
   "DATABASE_URL", "POSTGRES_URL", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN", "KV_REST_API_URL", "KV_REST_API_TOKEN",
-  "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_ID", "CLERK_SECRET_KEY", "PINECONE_API_KEY", "PINECONE_INDEX", "SENTRY_DSN",
+  "CLERK_SECRET_KEY", "PINECONE_API_KEY", "PINECONE_INDEX", "SENTRY_DSN",
 ];
 
 beforeEach(() => {
@@ -149,14 +149,10 @@ describe("routes with services switched off", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  it("refuses Stripe webhooks without crashing", async () => {
-    const res = await fetch(`${base}/api/billing/webhook`, { method: "POST", body: "{}" });
-    expect(res.status).toBe(503);
-  });
-
-  it("requires sign-in for billing", async () => {
-    expect((await fetch(`${base}/api/billing/status`)).status).toBe(401);
-    expect((await fetch(`${base}/api/billing/checkout`, { method: "POST" })).status).toBe(401);
+  it("no longer serves any billing routes", async () => {
+    for (const path of ["/api/billing/webhook", "/api/billing/checkout"]) {
+      expect((await fetch(`${base}${path}`, { method: "POST", body: "{}" })).status).toBe(404);
+    }
   });
 
   it("reports Clerk as off and rejects Clerk sign-in", async () => {

@@ -1,8 +1,7 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import { authRouter, requireAuth } from "./auth.js";
-import { describeError, generate, hasGeminiKey, streamGenerateWithSearch } from "./gemini.js";
+import { describeAiError, generateText, MODEL, PROVIDER, streamChat } from "./ai.js";
 import { apiRouter, servicesStatus, throttle } from "./api.js";
-import { billingRouter, billingWebhook } from "./billing.js";
 import { getCompanyIntel, getMarketNews, intelToText } from "./finnhub.js";
 import { isSymbol } from "./market.js";
 import { reportError } from "./monitoring.js";
@@ -10,8 +9,9 @@ import { relevantHeadlines, sanitizeHeadline } from "./vector.js";
 import { asyncHandler } from "./async.js";
 import { FRESHNESS_RULES, currentTimeNote } from "./freshness.js";
 
-export const MODEL = process.env.EQUIDY_MODEL ?? "gemini-3.6-flash";
-export const hasKey = hasGeminiKey();
+export { MODEL, PROVIDER };
+export const hasKey = PROVIDER !== null;
+const NOT_CONFIGURED = "The AI assistant is not configured on this server.";
 
 const SYSTEM = `You are Equidy, a financial intelligence assistant inside an investment analytics platform.
 
@@ -39,10 +39,8 @@ Guidelines:
 // The Express app is shared by the long-running server (server/index.ts) and the Vercel function (api/index.ts).
 export const app = express();
 app.set("trust proxy", 1); // behind Vercel/Render proxies: req.ip is the visitor, not the proxy
-app.post("/api/billing/webhook", express.raw({ type: "*/*", limit: "1mb" }), billingWebhook); // needs the raw body
 app.use(express.json({ limit: "4mb" }));
 app.use("/api/auth", authRouter);
-app.use("/api/billing", billingRouter);
 app.use("/api", apiRouter);
 
 app.get("/api/health", (_req, res) => {
@@ -61,7 +59,7 @@ export function cleanMessages(raw: unknown): Incoming[] {
 }
 
 app.post("/api/title", requireAuth, throttle("title", 30), asyncHandler(async (req, res) => {
-  if (!hasKey) return void res.status(503).json({ error: "Gemini is not configured on this server." });
+  if (!hasKey) return void res.status(503).json({ error: NOT_CONFIGURED });
   const messages = (req.body as { messages?: unknown } | undefined)?.messages;
   const transcript = cleanMessages(messages)
     .slice(0, 6)
@@ -69,10 +67,9 @@ app.post("/api/title", requireAuth, throttle("title", 30), asyncHandler(async (r
     .join("\n\n");
   if (!transcript) return void res.status(400).json({ error: "No messages to summarise." });
   try {
-    const { text, finish } = await generate({
-      model: MODEL,
-      maxOutputTokens: 2000,
-      thinking: "low",
+    const { text, finish } = await generateText({
+      maxTokens: 2000,
+      effort: "low",
       instructions:
         "You name chat conversations for a sidebar. Reply with only a title of 2 to 6 words that summarises what the conversation is about, in Title Case (capitalise every word). No quotes, no emoji, no trailing punctuation. If it is only greetings or small talk, reply: Casual Chat.",
       input: [{ role: "user", content: `Conversation:\n\n${transcript}\n\nTitle:` }],
@@ -88,7 +85,7 @@ app.post("/api/title", requireAuth, throttle("title", 30), asyncHandler(async (r
 
 app.post("/api/chat", requireAuth, throttle("chat", 20), asyncHandler(async (req, res) => {
   if (!hasKey) {
-    res.status(503).json({ error: "Gemini is not configured on this server." });
+    res.status(503).json({ error: NOT_CONFIGURED });
     return;
   }
   const { messages, context, symbols } = (req.body ?? {}) as { messages?: unknown; context?: string; symbols?: unknown };
@@ -114,10 +111,10 @@ app.post("/api/chat", requireAuth, throttle("chat", 20), asyncHandler(async (req
   res.on("close", () => abort.abort());
 
   try {
-    const finish = await streamGenerateWithSearch(
+    const finish = await streamChat(
       {
-        model: MODEL,
-        maxOutputTokens: 16000,
+        maxTokens: 16000,
+        effort: "medium",
         instructions: `${SYSTEM}\n\n${currentTimeNote(new Date())}\n\nPLATFORM CONTEXT\n${String(context ?? "").slice(0, 30_000)}${intel}`,
         input: clean,
         signal: abort.signal,
@@ -134,7 +131,7 @@ app.post("/api/chat", requireAuth, throttle("chat", 20), asyncHandler(async (req
     if (!res.writableEnded && !abort.signal.aborted) {
       console.error("[equidy] chat error:", err);
       await reportError(err, "POST /api/chat");
-      send({ type: "error", message: describeError(err) });
+      send({ type: "error", message: describeAiError(err) });
     }
   } finally {
     res.end();

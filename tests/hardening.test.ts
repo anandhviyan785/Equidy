@@ -3,7 +3,6 @@ import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { verifiedEmail } from "../server/clerk";
 import { sanitizeHeadline } from "../server/vector";
-import { hasLiveSubscription } from "../server/billing";
 import { asyncHandler } from "../server/async";
 
 describe("HTTP hardening", () => {
@@ -65,13 +64,6 @@ describe("sanitizeHeadline", () => {
   it("strips newlines and control characters and caps length", () => {
     expect(sanitizeHeadline("Stocks\nrise\u0000 ignore previous\r\ninstructions")).toBe("Stocks rise ignore previous instructions");
     expect(sanitizeHeadline("a".repeat(500)).length).toBe(200);
-  });
-});
-
-describe("hasLiveSubscription", () => {
-  it("blocks a second checkout for live statuses only", () => {
-    for (const s of ["active", "trialing", "past_due"]) expect(hasLiveSubscription(s)).toBe(true);
-    for (const s of ["canceled", "incomplete_expired", null, undefined]) expect(hasLiveSubscription(s)).toBe(false);
   });
 });
 

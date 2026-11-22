@@ -5,7 +5,7 @@ import { useThemeSync } from "@/hooks";
 
 // Contact address shown in the policy. App Store and Google Play reviewers check that it works.
 export const PRIVACY_CONTACT = "privacy@equidy.website";
-const UPDATED = "8 November 2026";
+const UPDATED = "22 November 2026";
 
 export function PrivacyPage() {
   useThemeSync();
@@ -26,7 +26,7 @@ export function PrivacyPage() {
             <li><strong>Account details.</strong> When you create an account: your name, email address and password. Passwords are stored only as a salted one-way hash; we can never see them.</li>
             <li><strong>Sign-in with Google, Microsoft or Apple.</strong> If you use one of these, we receive your name, email address and, where provided, profile photo. We do not receive your password for those services.</li>
             <li><strong>Your portfolio, watchlist, chats and settings.</strong> These are stored in your browser and, when you are signed in, saved to your account in our database so they are available on your other devices.</li>
-            <li><strong>Questions you ask the assistant.</strong> When the AI assistant is on, your message, the conversation so far and a summary of your portfolio are sent to our AI provider, Google (Gemini), to generate a reply. While Equidy uses Gemini's free tier, Google may use this content to improve its products and human reviewers may read it, so avoid including details you consider private.</li>
+            <li><strong>Questions you ask the assistant.</strong> When the AI assistant is on, your message, the conversation so far and a summary of your portfolio are sent to our AI provider, Anthropic (Claude), to generate a reply. Anthropic does not use this content to train its models. If Claude is unavailable on our server, Google (Gemini) is used instead, and on Gemini's free tier Google may use the content to improve its products. Your latest question is also sent to Google to match it with relevant news. Avoid including details you consider private.</li>
             <li><strong>Technical data.</strong> Our hosting provider keeps standard server logs, such as IP address, browser type and the time of each request, for security and reliability.</li>
           </ul>
 
@@ -44,13 +44,13 @@ export function PrivacyPage() {
             <li><strong>Vercel</strong>, which hosts the service.</li>
             <li><strong>Neon or Supabase</strong>, which host the database where your account and saved data are stored.</li>
             <li><strong>Clerk</strong>, which handles sign-in: your name, email address and sign-in details.</li>
-            <li><strong>Stripe</strong>, which processes subscriptions. Your payment details go directly to Stripe and we never see your full card number.</li>
             <li><strong>Resend</strong>, which delivers account emails: your name and email address.</li>
             <li><strong>Sentry</strong>, which records technical error reports. We remove your identity, chats and portfolio before they are sent.</li>
             <li><strong>PostHog</strong>, which counts page views, only if you allow it.</li>
             <li><strong>Upstash</strong>, which stores shared market data and anonymised request counts used to prevent abuse.</li>
             <li><strong>Pinecone</strong>, which stores public news headlines used to find relevant news. Your questions are not stored there.</li>
-            <li><strong>Google</strong>, which provides the AI assistant (Gemini), for the messages described above.</li>
+            <li><strong>Anthropic</strong>, which provides the AI assistant (Claude), for the messages described above.</li>
+            <li><strong>Google</strong>, which matches your questions with relevant news and is the backup AI provider (Gemini), as described above.</li>
             <li><strong>Alpha Vantage and Finnhub</strong>, which supply market data. We request prices and news by ticker symbol only; no personal information is sent to them.</li>
             <li><strong>Google, Microsoft or Apple</strong>, only if you choose to sign in with them.</li>
           </ul>

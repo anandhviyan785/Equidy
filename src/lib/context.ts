@@ -4,7 +4,7 @@ import { allocationBy, benchmarkHistory, portfolioHistory, positions, riskMetric
 import { money, pct, price } from "./format";
 import { liveDays } from "./market";
 
-/** A snapshot of the user's financial state, shared by the Gemini backend and the offline engine. */
+/** A snapshot of the user's financial state, shared by the AI backend and the offline engine. */
 export function buildSnapshot() {
   const { holdings, watchlist } = usePortfolio.getState();
   const { prices, sources } = useMarket.getState();
