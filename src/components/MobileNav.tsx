@@ -43,12 +43,11 @@ export function MobileNav() {
   const handleSignOut = async () => {
     setOpen(false);
     try {
-      await signOut();
+      if (!(await signOut())) return;
     } catch (e) {
       console.error("[equidy] sign out failed:", e);
-    } finally {
-      navigate("/login", { replace: true });
     }
+    navigate("/login", { replace: true });
   };
 
   return (

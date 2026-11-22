@@ -200,7 +200,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             )}
           </NavLink>
           <button
-            onClick={async () => { await signOut(); navigate("/login", { replace: true }); }}
+            onClick={async () => { if (!(await signOut())) return; navigate("/login", { replace: true }); }}
             title="Sign out"
             className={cn("mt-0.5 flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-sm text-muted transition-colors hover:bg-elevated hover:text-fg", isCollapsed && "justify-center")}
           >

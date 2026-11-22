@@ -35,7 +35,7 @@ export function ProfilePage() {
           <div className="text-sm text-muted">{profile.email}</div>
           {user && <div className="mt-1 text-xs text-muted">Signed in with {providerLabel(user.provider)}{user.demo ? " · demo account" : ""}</div>}
         </div>
-        <button className="btn-outline" onClick={async () => { await signOut(); navigate("/login", { replace: true }); }}>
+        <button className="btn-outline" onClick={async () => { if (!(await signOut())) return; navigate("/login", { replace: true }); }}>
           <LogOut className="h-4 w-4" /> Sign out
         </button>
       </div>

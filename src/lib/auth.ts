@@ -106,13 +106,21 @@ export function demoSignIn() {
   signIn({ id: "demo", provider: "email", name: "Demo Investor", email: "demo@equidy.app", avatar: null, demo: true });
 }
 
-export async function signOut() {
+/** Signs out; resolves false (and tells the user) when the server could not end the session. */
+export async function signOut(): Promise<boolean> {
   const wasClerk = useAuth.getState().user?.provider === "clerk";
-  try {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
-  } catch { /* server unreachable: local sign-out still applies */ }
+  const res = await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
+  // The session cookie is HttpOnly, so a failed logout would leave the server session alive and
+  // the next page load would sign the user straight back in. Only a missing server (the static
+  // preview, 404) or a demo user can sign out locally.
+  const demo = useAuth.getState().user?.demo === true;
+  if (!demo && res && !res.ok && res.status !== 404) {
+    window.alert("We couldn't sign you out. Please check your connection and try again.");
+    return false;
+  }
   useAuth.getState().setUser(null);
   endClerkSession(wasClerk);
+  return true;
 }
 
 /** Permanently deletes the account and clears this browser's Equidy data. */
