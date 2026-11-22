@@ -87,7 +87,8 @@ export async function streamClaude(req: ClaudeRequest, onDelta: (text: string) =
     messages = [...messages, { role: "assistant", content: final.content }];
   }
 
-  const finish = finishOf(stopReason);
+  // Still paused after the continuation limit: the answer is partial, so don't report it as complete.
+  const finish = stopReason === "pause_turn" ? "max_tokens" : finishOf(stopReason);
   if (finish !== "refusal") {
     const list = sourcesMarkdown(sources.slice(0, MAX_SOURCES));
     if (list) onDelta(list);

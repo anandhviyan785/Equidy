@@ -60,6 +60,12 @@ describe("streamClaude", () => {
     expect(out.join("")).toBe("Done");
   });
 
+  it("does not report a still-paused search as completed once the continuation limit is hit", async () => {
+    const paused = { events: [], final: { stop_reason: "pause_turn", content: [] } };
+    const { client } = fakeClient([paused, paused, paused, paused, paused, paused]);
+    expect(await streamClaude({ ...base, webSearch: true }, () => {}, client)).toBe("max_tokens");
+  });
+
   it("lists web sources once each after a searched answer", async () => {
     const content = [text("Apple rose", [cite("https://a.com/x", "A news"), cite("https://a.com/x", "A news")]), text(" today", [cite("https://b.com", "B news")])];
     const { client } = fakeClient([{ events: [delta("Apple rose today")], final: { stop_reason: "end_turn", content } }]);
