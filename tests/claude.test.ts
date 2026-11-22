@@ -77,6 +77,16 @@ describe("streamClaude", () => {
     expect(all.match(/a\.com\/x/g)).toHaveLength(1);
   });
 
+  it("skips non-http citation links and escapes parentheses in source urls", async () => {
+    const content = [text("x", [cite("javascript:alert(1)", "bad"), cite("https://a.com/p(1)", "A (news)")])];
+    const { client } = fakeClient([{ events: [delta("x")], final: { stop_reason: "end_turn", content } }]);
+    const out: string[] = [];
+    await streamClaude({ ...base, webSearch: true }, (t) => out.push(t), client);
+    const all = out.join("");
+    expect(all).not.toContain("javascript:");
+    expect(all).toContain("[A news](https://a.com/p%281%29)");
+  });
+
   it("reports the token limit and refusals", async () => {
     const long = fakeClient([{ events: [], final: { stop_reason: "max_tokens", content: [] } }]);
     expect(await streamClaude(base, () => {}, long.client)).toBe("max_tokens");

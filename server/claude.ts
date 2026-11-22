@@ -40,21 +40,25 @@ function finishOf(stopReason: string | null): FinishReason {
 type Block = { type: string; citations?: unknown };
 type Citation = { type?: string; url?: string; title?: string | null };
 
+function hostnameOf(url: string): string {
+  try { return new URL(url).hostname; } catch { return url; }
+}
+
 /** Web pages Claude cited in its answer, once each, in the order first cited. */
 function sourcesOf(content: readonly Block[]): WebSource[] {
   const seen = new Map<string, WebSource>();
   for (const block of content) {
     if (block.type !== "text" || !Array.isArray(block.citations)) continue;
     for (const c of block.citations as Citation[]) {
-      if (c.type !== "web_search_result_location" || !c.url || seen.has(c.url)) continue;
-      seen.set(c.url, { uri: c.url, title: c.title || new URL(c.url).hostname });
+      if (c.type !== "web_search_result_location" || !c.url || !/^https?:\/\//i.test(c.url) || seen.has(c.url)) continue;
+      seen.set(c.url, { uri: c.url, title: c.title || hostnameOf(c.url) });
     }
   }
   return [...seen.values()].slice(0, MAX_SOURCES);
 }
 
 const sourcesMarkdown = (sources: WebSource[]) =>
-  sources.length ? `\n\n**Sources:** ${sources.map((s) => `[${s.title.replace(/[[\]]/g, "")}](${s.uri})`).join(" · ")}` : "";
+  sources.length ? `\n\n**Sources:** ${sources.map((s) => `[${s.title.replace(/[[\]()\n]/g, "")}](${s.uri.replace(/[()\s]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`)})`).join(" · ")}` : "";
 
 /** Streams Claude's answer through `onDelta`, resuming paused search turns, then appends any web sources. */
 export async function streamClaude(req: ClaudeRequest, onDelta: (text: string) => void, client: ClaudeClient = defaultClient()): Promise<FinishReason> {
