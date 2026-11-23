@@ -42,11 +42,12 @@ export function ChatPage() {
   const stick = useRef(true);
 
   const lastLen = conv?.messages[conv.messages.length - 1]?.content.length ?? 0;
+  // Switching conversations reuses this component, so re-pin to the bottom before scrolling.
+  useLayoutEffect(() => { stick.current = true; }, [id]);
   useLayoutEffect(() => {
     const el = scroller.current;
     if (el && stick.current) el.scrollTop = el.scrollHeight;
-  }, [conv?.messages.length, lastLen]);
-  useEffect(() => { stick.current = true; }, [id]);
+  }, [id, conv?.messages.length, lastLen]);
 
   if (id && !conv) return <Navigate to="/" replace />;
 
