@@ -87,7 +87,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
           />
           {searching && !isCollapsed && (
             <div className="px-1 py-1.5">
-              <input autoFocus className="input h-9" placeholder="Search chats…" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Escape" && (setQuery(""), setSearching(false))} />
+              <input autoFocus className="input h-9" aria-label="Search conversations" placeholder="Search chats…" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Escape" && (setQuery(""), setSearching(false))} />
             </div>
           )}
         </div>
@@ -124,6 +124,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                         <input
                           autoFocus
                           defaultValue={c.title}
+                          aria-label="Rename conversation"
                           className="input mx-1 my-0.5 h-8"
                           onBlur={(e) => { rename(c.id, e.target.value.trim() || c.title); setEditing(null); }}
                           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditing(null); }}
@@ -136,9 +137,11 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                       )}
                       {editing !== c.id && (
                         <button
-                          className={cn("mr-1 rounded-lg p-1 text-muted hover:text-fg", menu === c.id ? "opacity-100" : "opacity-0 group-hover:opacity-100 max-lg:opacity-100")}
+                          className={cn("mr-1 rounded-lg p-1 text-muted hover:text-fg", menu === c.id ? "opacity-100" : "opacity-0 focus-visible:opacity-100 group-hover:opacity-100 max-lg:opacity-100")}
                           onClick={() => setMenu(menu === c.id ? null : c.id)}
                           aria-label="Conversation options"
+                          aria-haspopup="menu"
+                          aria-expanded={menu === c.id}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
