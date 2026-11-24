@@ -79,6 +79,7 @@ app.post("/api/title", requireAuth, throttle("title", 30), asyncHandler(async (r
     res.json({ title: text.trim().slice(0, 80) });
   } catch (err) {
     console.error("[equidy] title error:", err);
+    await reportError(err, "POST /api/title");
     res.status(502).json({ error: "Couldn't create a title." });
   }
 }));
