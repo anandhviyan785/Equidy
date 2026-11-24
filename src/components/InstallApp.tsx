@@ -73,8 +73,8 @@ export function InstallAppButton({ collapsed = false, plain = false, className }
 
   return (
     <>
-      <button type="button" onClick={onClick} title={collapsed ? "Install app" : undefined} className={cn(!plain && MENU_ITEM, collapsed && "justify-center", className)}>
-        <Download className="h-[18px] w-[18px] shrink-0" />
+      <button type="button" onClick={onClick} title={collapsed ? "Install app" : undefined} aria-label={collapsed ? "Install app" : undefined} className={cn(!plain && MENU_ITEM, collapsed && "justify-center", className)}>
+        <Download aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
         {!collapsed && "Install app"}
       </button>
       <Modal open={guideOpen} onClose={() => setGuideOpen(false)} title="Install Equidy">
