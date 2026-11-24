@@ -146,7 +146,11 @@ const RENEW_AFTER_MS = 86_400_000;
 
 /** Blocks a route unless the visitor is signed in — only when sign-in is configured at all. */
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!authEnabled()) return next();
+  if (!authEnabled()) {
+    // Fail closed in production so a missing sign-in configuration never exposes paid AI routes.
+    if (IS_PRODUCTION) return void res.status(503).json({ error: "Sign-in isn't configured on this server." });
+    return next();
+  }
   liveSessionUser(req).then((user) => {
     if (user) return void next();
     res.status(401).json({ error: "Please sign in to continue." });
