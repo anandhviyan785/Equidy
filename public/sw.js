@@ -23,9 +23,12 @@ async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
   const response = await fetch(request);
-  if (response.ok) {
+  // The host rewrites unknown paths to index.html with status 200, so never cache an HTML reply under an asset URL.
+  const type = response.headers.get("content-type") || "";
+  if (response.ok && !type.includes("text/html")) {
+    const copy = response.clone();
     const cache = await caches.open(CACHE);
-    cache.put(request, response.clone());
+    await cache.put(request, copy);
   }
   return response;
 }
