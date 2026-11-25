@@ -46,6 +46,7 @@ export function MobileNav() {
       if (!(await signOut())) return;
     } catch (e) {
       console.error("[equidy] sign out failed:", e);
+      return;
     }
     navigate("/login", { replace: true });
   };
