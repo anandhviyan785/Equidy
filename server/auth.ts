@@ -126,6 +126,7 @@ async function sessionRevoked(session: { user: SessionUser; issuedAt: number }):
     return await isSessionRevoked(session.user.id, session.issuedAt);
   } catch (err) {
     console.warn("[equidy] deleted-account check unavailable:", (err as Error).message);
+    await reportError(err, "session revocation check (failing open)");
     return false;
   }
 }
