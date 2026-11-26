@@ -24,7 +24,10 @@ export function loadAuth(): Promise<AuthInfo> {
       else useAuth.getState().setUser(null);
       return { online: true, accounts: !!j.accounts, passwordReset: !!j.passwordReset, clerk: !!j.clerk, providers: j.providers };
     })
-    .catch(() => ({ online: false, accounts: false, passwordReset: false, clerk: false, providers: NONE }))
+    .catch((e: unknown) => {
+      console.warn("[equidy] auth session check failed:", e instanceof Error ? e.message : e);
+      return { online: false, accounts: false, passwordReset: false, clerk: false, providers: NONE };
+    })
     .finally(() => useAuth.getState().setChecked(true));
   return infoPromise;
 }
