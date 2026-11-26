@@ -120,25 +120,36 @@ export function readSession(req: Request): SessionUser | null {
   return readSessionDetails(req)?.user ?? null;
 }
 
-/** True when the session belongs to an account deleted after the session was issued. Fails open if the check is unavailable. */
-async function sessionRevoked(session: { user: SessionUser; issuedAt: number }): Promise<boolean> {
+const REVOCATION_REPORT_INTERVAL_MS = 60_000;
+let lastRevocationReport = 0;
+
+/**
+ * True when the session belongs to an account deleted or reset after the session was issued.
+ * If the check is unavailable it fails open for low-risk routes; `strict` routes (per-user data) throw instead.
+ */
+async function sessionRevoked(session: { user: SessionUser; issuedAt: number }, strict = false): Promise<boolean> {
   try {
     return await isSessionRevoked(session.user.id, session.issuedAt);
   } catch (err) {
-    console.warn("[equidy] deleted-account check unavailable:", (err as Error).message);
-    await reportError(err, "session revocation check (failing open)");
+    console.warn("[equidy] deleted-account check unavailable:", err instanceof Error ? err.message : String(err));
+    // Report at most once a minute and never block the request on the monitoring flush.
+    if (Date.now() - lastRevocationReport > REVOCATION_REPORT_INTERVAL_MS) {
+      lastRevocationReport = Date.now();
+      void reportError(err, strict ? "session revocation check (failing closed)" : "session revocation check (failing open)");
+    }
+    if (strict) throw err;
     return false;
   }
 }
 
 /** The signed-in user, or null when there is no session or its account was deleted. */
-async function liveSessionUser(req: Request): Promise<SessionUser | null> {
-  return (await liveSession(req))?.user ?? null;
+async function liveSessionUser(req: Request, strict = false): Promise<SessionUser | null> {
+  return (await liveSession(req, strict))?.user ?? null;
 }
 
-async function liveSession(req: Request): Promise<{ user: SessionUser; issuedAt: number } | null> {
+async function liveSession(req: Request, strict = false): Promise<{ user: SessionUser; issuedAt: number } | null> {
   const session = readSessionDetails(req);
-  if (!session || (await sessionRevoked(session))) return null;
+  if (!session || (await sessionRevoked(session, strict))) return null;
   return session;
 }
 
@@ -160,11 +171,12 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 /** Blocks a route unless there is a real signed-in user (for per-user data such as sync and bank links). */
 export function requireUser(req: Request, res: Response, next: NextFunction) {
-  liveSessionUser(req).then((user) => {
+  // Strict: if revocation can't be checked, refuse rather than trust a possibly revoked session.
+  liveSessionUser(req, true).then((user) => {
     if (!user) return void res.status(401).json({ error: "Please sign in to continue." });
     res.locals.user = user;
     next();
-  }, next);
+  }, () => void res.status(503).json({ error: "Temporarily unavailable. Please try again shortly." }));
 }
 
 // ---------------- routes ----------------
