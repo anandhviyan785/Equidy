@@ -36,6 +36,8 @@ function standardPostgres(url: string): Sql {
     connectionTimeoutMillis: 8_000,
     ssl: sslOptions(ca),
   });
+  // Idle clients can be dropped by the pooler; without a listener Node treats the event as an uncaught exception.
+  pool.on("error", (err) => console.error("[equidy] postgres pool error:", err.message));
   const run = async (strings: TemplateStringsArray, ...values: unknown[]) => (await pool.query(toStatement(strings), values)).rows;
   return run as unknown as Sql;
 }
