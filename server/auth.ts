@@ -300,7 +300,13 @@ authRouter.post("/clerk", express.json(), async (req, res) => {
 
 // Account deletion (required by the App Store and Google Play for apps with sign-up).
 authRouter.post("/delete", asyncHandler(async (req, res) => {
-  const user = await liveSessionUser(req);
+  // Strict: deletion is irreversible, so refuse if revocation can't be checked.
+  let user: SessionUser | null;
+  try {
+    user = await liveSessionUser(req, true);
+  } catch {
+    return void res.status(503).json({ error: "Temporarily unavailable. Please try again shortly." });
+  }
   if (!user) return void res.status(401).json({ error: "Please sign in to continue." });
   try {
     await markUserDeleted(user.id);
