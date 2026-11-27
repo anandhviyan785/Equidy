@@ -60,7 +60,16 @@ export function MobileTabBar() {
                   </NavLink>
                 ))}
               </>}
-              <button type="button" onClick={async () => { if (!(await signOut())) return; setOpen(false); navigate("/login", { replace: true }); }}
+              <button type="button" onClick={async () => {
+                try {
+                  if (!(await signOut())) return;
+                } catch (e) {
+                  console.error("[equidy] sign out failed:", e);
+                  return;
+                }
+                setOpen(false);
+                navigate("/login", { replace: true });
+              }}
                 className="mt-1 flex w-full items-center gap-3 rounded-xl border-t border-line px-3 py-2.5 text-left text-sm text-muted">
                 <LogOut className="h-4 w-4" />Sign out
               </button>
