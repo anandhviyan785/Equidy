@@ -17,7 +17,7 @@ let infoPromise: Promise<AuthInfo> | null = null;
 /** Checks the server session once per page load and syncs it into the store. */
 export function loadAuth(): Promise<AuthInfo> {
   infoPromise ??= fetch("/api/auth/session", { credentials: "same-origin", signal: AbortSignal.timeout(5000) })
-    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
     .then((j: { user: AuthUser | null; providers: Providers; accounts?: boolean; passwordReset?: boolean; clerk?: boolean }) => {
       // When the server is reachable, only a real server session counts.
       if (j.user) signIn(j.user);
